@@ -1,0 +1,15 @@
+model ActivityLog {
+    id       String  @id @default(uuid())
+    userId   String?
+    action   String
+    entity   String
+    entityId String?
+
+    createdAt DateTime @default(now())
+
+    // Relation: Keep logs even if user is deleted (SetNull)
+    user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+    @@index([userId]) // Quick lookup for a specific user's history
+    @@index([createdAt]) // For sorting "Recent Activity" feeds
+}

@@ -1,0 +1,40 @@
+model Review {
+    id           String       @id @default(uuid())
+    rating       Int
+    content      String
+    isSpoiler    Boolean      @default(false)
+    tags         String[]
+    status       ReviewStatus @default(PENDING)
+    likeCount    Int          @default(0)
+    commentCount Int          @default(0)
+    isDeleted    Boolean      @default(false)
+    deletedAt    DateTime?
+
+    userId  String
+    mediaId String
+
+    user  User  @relation(fields: [userId], references: [id])
+    media Media @relation(fields: [mediaId], references: [id])
+
+    comments Comment[]
+    likes    Like[]
+    reports  ReviewReport[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([userId]) // Added: Load a user's review history
+    @@index([mediaId]) // Added: Load all reviews for a movie/show
+    @@index([status]) // Added: Admin dashboard filtering for PENDING reviews
+}
+
+model ReviewReport {
+    id        String   @id @default(uuid())
+    reviewId  String
+    userId    String
+    reason    String
+    review    Review   @relation(fields: [reviewId], references: [id])
+    user      User     @relation(fields: [userId], references: [id])
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}

@@ -1,0 +1,41 @@
+model Payment {
+    id String @id @default(uuid()) // or uuid(7) if your environment supports it
+
+    amount             Float
+    transactionId      String        @unique
+    stripeEventId      String?       @unique
+    status             PaymentStatus @default(PENDING)
+    invoiceUrl         String?
+    paymentGatewayData Json?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations: Connect to User instead of Appointment
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    // Optional: Link to a specific subscription record if needed
+    subscriptionId String?
+    subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+
+    @@index([userId])
+    @@index([transactionId])
+    @@index([status])
+    @@map("payments")
+}
+
+model Subscription {
+    id     String           @id @default(uuid())
+    userId String
+    type   SubscriptionType
+
+    startDate DateTime @default(now())
+    endDate   DateTime
+    isActive  Boolean  @default(true)
+
+    user     User      @relation(fields: [userId], references: [id])
+    payments Payment[] // A subscription can have multiple renewal payments
+
+    @@index([userId])
+}

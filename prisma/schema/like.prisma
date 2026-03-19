@@ -1,0 +1,12 @@
+model Like {
+    id       String @id @default(uuid())
+    userId   String
+    reviewId String
+
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, reviewId])
+    @@index([userId]) // Added: Get all likes by a specific user
+    @@index([reviewId]) // Added: Get all likes for a specific review
+}

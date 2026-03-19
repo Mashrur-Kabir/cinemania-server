@@ -1,0 +1,13 @@
+model Notification {
+    id      String  @id @default(uuid())
+    userId  String
+    message String
+    isRead  Boolean @default(false)
+
+    createdAt DateTime @default(now())
+
+    // Relation: Delete notifications if user is deleted
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId]) // Critical for loading a user's inbox quickly
+}
