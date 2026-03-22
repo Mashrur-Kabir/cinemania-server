@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your CineMania Access Code</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #020617; /* Slate 950 */
+            margin: 0;
+            padding: 0;
+            color: #f8fafc;
+        }
+        .wrapper {
+            width: 100%;
+            background-color: #020617;
+            padding: 40px 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #0f172a; /* Slate 900 */
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid #1e293b;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .header {
+            background: linear-gradient(to right, #e11d48, #be123c); /* Rose/Crimson */
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+        .content {
+            padding: 48px;
+            text-align: center;
+        }
+        .greeting {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #ffffff;
+        }
+        .instruction {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            color: #94a3b8;
+        }
+        .otp-display {
+            background-color: #1e293b; /* Slate 800 */
+            border: 2px dashed #e11d48;
+            border-radius: 16px;
+            padding: 32px;
+            margin: 0 auto 32px auto;
+            display: inline-block;
+            min-width: 280px;
+        }
+        .otp-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #e11d48;
+            margin-bottom: 12px;
+            display: block;
+        }
+        .otp-code {
+            font-size: 48px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 800;
+            color: #fbbf24; /* Amber/Gold */
+            letter-spacing: 10px;
+        }
+        .expiry-note {
+            font-size: 14px;
+            color: #64748b;
+        }
+        .expiry-note strong {
+            color: #e11d48;
+        }
+        .footer {
+            padding: 32px;
+            text-align: center;
+            font-size: 12px;
+            color: #475569;
+            background-color: #020617;
+            border-top: 1px solid #1e293b;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <h1>CINEMANIA</h1>
+            </div>
+            <div class="content">
+                <p class="greeting">Grab your popcorn, <%= name %>!</p>
+                <p class="instruction">
+                    Your "Ticket Code" to join the world's most immersive movie portal is ready. Enter the code below to verify your account.
+                </p>
+                
+                <div class="otp-display">
+                    <span class="otp-label">Entry Pass Code</span>
+                    <div class="otp-code"><%= otp %></div>
+                </div>
+
+                <p class="expiry-note">
+                    Valid for the next <strong>2 minutes</strong>. Don't let the credits roll!
+                </p>
+            </div>
+            <div class="footer">
+                <p>&copy; 2026 Cinemania Streaming Portal. All rights reserved.</p>
+                <p>System Hash: <%= otp %> &bull; High Fidelity Auth</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

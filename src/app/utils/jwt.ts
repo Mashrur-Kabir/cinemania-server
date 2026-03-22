@@ -1,5 +1,5 @@
 import jwt, { JwtPayload, Secret, SignOptions } from "jsonwebtoken";
-import { AppError } from "../error/AppError";
+import { AppError } from "../errors/AppError";
 import status from "http-status";
 
 /**
