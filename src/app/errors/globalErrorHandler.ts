@@ -1,13 +1,13 @@
 import { ErrorRequestHandler, NextFunction, Request, Response } from "express";
 import status from "http-status";
 import { Prisma } from "../../generated/prisma/client";
-import { formatErrorStack } from "../helpers/formatErrorStack";
+import { formatErrorStack } from "../helpers/error.helpers/formatErrorStack";
 import { AppError } from "./AppError";
 import { ZodError } from "zod";
 import { IErrorResponse, IErrorSources } from "../interfaces/error.interface";
 import { handleZodError } from "./zodError";
 // import { deleteUploadedFilesFromGlobalErrorHandler } from "../utils/deleteUploadedFilesFromGEH";
-import { handlePrismaError } from "../helpers/handlePrismaErrors";
+import { handlePrismaError } from "../helpers/error.helpers/handlePrismaErrors";
 
 const globalErrorHandler: ErrorRequestHandler = async (
   err: unknown,

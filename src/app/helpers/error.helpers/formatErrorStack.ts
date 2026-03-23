@@ -1,4 +1,4 @@
-import { envVars } from "../../config/env";
+import { envVars } from "../../../config/env";
 
 export const formatErrorStack = (err: unknown) => {
   return envVars.NODE_ENV === "development" && err instanceof Error

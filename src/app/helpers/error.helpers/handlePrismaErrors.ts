@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import status from "http-status";
-import { IErrorSources } from "../interfaces/error.interface";
-import { Prisma } from "../../generated/prisma/client";
+import { IErrorSources } from "../../interfaces/error.interface";
+import { Prisma } from "../../../generated/prisma/client";
 
 const getStatusCodeFromPrismaError = (errorCode: string): number => {
   if (errorCode === "P2002") return status.CONFLICT;
