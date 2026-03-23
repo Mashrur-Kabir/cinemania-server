@@ -79,8 +79,8 @@ const loadEnvVariables = (): EnvConfig => {
       STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY as string,
       STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET as string,
     },
-    ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL as string,
-    ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD as string,
+    ADMIN_EMAIL: process.env.ADMIN_EMAIL as string,
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD as string,
   };
 };
 

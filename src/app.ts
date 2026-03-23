@@ -3,8 +3,8 @@ import { IndexRoutes } from "./app/routes";
 import globalErrorHandler from "./app/errors/globalErrorHandler";
 import notFoundHandler from "./app/errors/routeNotFound";
 import cookieParser from "cookie-parser";
-// import { toNodeHandler } from "better-auth/node";
-// import { auth } from "./app/lib/auth";
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "./app/lib/auth";
 import path from "path";
 import { envVars } from "./config/env";
 import cors from "cors";
@@ -48,7 +48,7 @@ app.use(cookieParser());
 // Enable URL-encoded form data parsing
 app.use(express.urlencoded({ extended: true }));
 
-// app.use("/api/auth", toNodeHandler(auth));
+app.use("/api/auth", toNodeHandler(auth));
 
 // Basic route
 app.get("/", (req: Request, res: Response) => {

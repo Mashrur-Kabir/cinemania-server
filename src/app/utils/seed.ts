@@ -1,5 +1,5 @@
 import { envVars } from "../../config/env";
-import { Role } from "../../generated/prisma/enums";
+import { Role, UserStatus } from "../../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
 import { auth } from "../lib/auth";
 
@@ -36,6 +36,7 @@ export const seedAdmin = async () => {
       },
       data: {
         emailVerified: true,
+        status: UserStatus.ACTIVE,
       },
     });
 

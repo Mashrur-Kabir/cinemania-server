@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./app/utils/logger";
+import { seedAdmin } from "./app/utils/seed";
 import { envVars } from "./config/env";
 import { Server } from "http";
 
@@ -10,7 +11,7 @@ const bootstrap = async () => {
 
   try {
     // seed admin first:
-    // await seedAdmin();
+    await seedAdmin();
 
     server = app.listen(PORT, () => {
       logger.success(`Server is running on http://localhost:${PORT}`);
