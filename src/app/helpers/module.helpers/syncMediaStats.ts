@@ -1,19 +1,31 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ReviewStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
 
-// Helper: Recalculate Media stats
-export const syncMediaStats = async (mediaId: string) => {
-  const stats = await prisma.review.aggregate({
-    where: { mediaId, status: ReviewStatus.APPROVED, isDeleted: false },
+/**
+ * Recalculates and updates the Media model's counters.
+ * Accepts an optional 'tx' to participate in existing transactions.
+ */
+export const syncMediaStats = async (mediaId: string, tx?: any) => {
+  const client = tx || prisma;
+
+  // 1. Aggregate the latest stats for approved reviews
+  const stats = await client.review.aggregate({
+    where: {
+      mediaId,
+      status: ReviewStatus.APPROVED,
+      isDeleted: false,
+    },
     _avg: { rating: true },
-    _count: { id: true },
+    _count: { _all: true },
   });
 
-  await prisma.media.update({
+  // 2. Update the Media record with the new calculated values
+  await client.media.update({
     where: { id: mediaId },
     data: {
       averageRating: stats._avg.rating || 0,
-      reviewCount: stats._count.id,
+      reviewCount: stats._count._all || 0,
     },
   });
 };

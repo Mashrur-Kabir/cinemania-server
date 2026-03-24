@@ -27,6 +27,12 @@ router.post(
 );
 
 router.post(
+  "/resend-otp",
+  validateRequest(AuthValidation.resendOtpValidationSchema),
+  AuthController.resendOTP,
+);
+
+router.post(
   "/forget-password",
   validateRequest(AuthValidation.forgetPasswordValidationSchema),
   AuthController.forgetPassword,

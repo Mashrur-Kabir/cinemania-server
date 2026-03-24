@@ -30,6 +30,41 @@ const createReviewInDB = async (userId: string, payload: IReviewPayload) => {
   });
 };
 
+const updateReviewInDB = async (
+  userId: string,
+  reviewId: string,
+  payload: Partial<IReviewPayload>,
+) => {
+  const review = await prisma.review.findUnique({
+    where: { id: reviewId },
+  });
+
+  if (!review || review.isDeleted)
+    throw new AppError(status.NOT_FOUND, "Review not found");
+  if (review.userId !== userId)
+    throw new AppError(status.FORBIDDEN, "You can only edit your own reviews.");
+
+  return await prisma.$transaction(async (tx) => {
+    // If it was already approved, we need to hide it and re-moderate
+    const needsRemoderation = review.status === ReviewStatus.APPROVED;
+
+    const updatedReview = await tx.review.update({
+      where: { id: reviewId },
+      data: {
+        ...payload,
+        status: needsRemoderation ? ReviewStatus.PENDING : review.status,
+      },
+    });
+
+    // If it was approved, it's now 'Pending', so we MUST remove its impact from the movie stats
+    if (needsRemoderation) {
+      await syncMediaStats(review.mediaId, tx);
+    }
+
+    return updatedReview;
+  });
+};
+
 const updateReviewStatus = async (
   reviewId: string,
   newStatus: ReviewStatus,
@@ -41,12 +76,30 @@ const updateReviewStatus = async (
     });
 
     // If approved or moved out of approved, sync the media stats
-    await syncMediaStats(review.mediaId);
+    await syncMediaStats(review.mediaId, tx);
     return review;
   });
 };
 
 const toggleLikeInDB = async (userId: string, reviewId: string) => {
+  // 1. Fetch the review to check its status
+  const review = await prisma.review.findUnique({
+    where: { id: reviewId },
+  });
+
+  // 2. Safeguard: Only allow likes on Approved and non-deleted reviews
+  if (!review || review.isDeleted) {
+    throw new AppError(status.NOT_FOUND, "Review not found");
+  }
+
+  if (review.status !== ReviewStatus.APPROVED) {
+    throw new AppError(
+      status.BAD_REQUEST,
+      "You can only like reviews that have been approved by moderators.",
+    );
+  }
+
+  // 3. Check for existing like
   const existingLike = await prisma.like.findUnique({
     where: { userId_reviewId: { userId, reviewId } },
   });
@@ -67,7 +120,6 @@ const toggleLikeInDB = async (userId: string, reviewId: string) => {
     }
   });
 };
-
 const getAllReviewsFromDB = async (filters: IReviewFilterOptions) => {
   const reviewQuery = new QueryBuilder<
     Review,
@@ -125,12 +177,59 @@ const getReportedReviewsFromDB = async () => {
   });
 };
 
+const deleteReviewFromDB = async (
+  userId: string,
+  role: string,
+  reviewId: string,
+) => {
+  const review = await prisma.review.findUnique({
+    where: { id: reviewId },
+  });
+
+  if (!review) {
+    throw new AppError(status.NOT_FOUND, "Review not found");
+  }
+
+  // 1. Permission Check: Admin can delete anything, Users only their own
+  const isOwner = review.userId === userId;
+  const isAdmin = role === "ADMIN";
+
+  if (!isOwner && !isAdmin) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "You do not have permission to delete this review.",
+    );
+  }
+
+  // 2. Transactional Soft Delete
+  return await prisma.$transaction(async (tx) => {
+    const deletedReview = await tx.review.update({
+      where: { id: reviewId },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        status: "REJECTED", // Optional: move out of APPROVED to keep counters clean
+      },
+    });
+
+    // 3. Sync Media Stats: This ensures reviewCount and averageRating update immediately
+    // Only sync if the review was actually contributing to the stats
+    if (review.status === ReviewStatus.APPROVED) {
+      await syncMediaStats(review.mediaId, tx);
+    }
+
+    return deletedReview;
+  });
+};
+
 export const ReviewService = {
   createReviewInDB,
+  updateReviewInDB,
   updateReviewStatus,
   toggleLikeInDB,
   getAllReviewsFromDB,
   syncMediaStats,
   reportReviewInDB,
   getReportedReviewsFromDB,
+  deleteReviewFromDB,
 };

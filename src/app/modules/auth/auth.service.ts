@@ -17,6 +17,22 @@ import { jwtHelpers } from "../../utils/jwt";
 const registerUserInDB = async (payload: IRegisterUserPayload) => {
   const { name, email, password, image } = payload;
 
+  // 🔴 EXISTING USER CHECK
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (existingUser) {
+    if (!existingUser.emailVerified) {
+      throw new AppError(
+        status.BAD_REQUEST,
+        "User already registered but email not verified. Please verify your email or request OTP again.",
+      );
+    }
+
+    throw new AppError(status.CONFLICT, "User already exists with this email");
+  }
+
   const data = await auth.api.signUpEmail({
     body: { name, email, password, image },
   });
@@ -78,7 +94,7 @@ const getMeFromDB = async (user: IAuthUser) => {
   const result = await prisma.user.findUnique({
     where: { id: user.id, isDeleted: false },
     include: {
-      subscriptions: true, // Specific to CineTube
+      subscriptions: true, // Specific to Cinemania
       watchlist: { include: { media: true } }, // Show actual movies in watchlist
       reviews: true,
       notifications: { where: { isRead: false } }, // Fetch unread notifications
@@ -266,6 +282,28 @@ const verifyEmailForUser = async (email: string, otp: string) => {
   }
 };
 
+const resendVerificationOTP = async (email: string) => {
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  if (user.emailVerified) {
+    throw new AppError(status.BAD_REQUEST, "Email already verified");
+  }
+
+  if (user.isDeleted || user.status === UserStatus.DELETED) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  await auth.api.sendVerificationEmail({
+    body: { email },
+  });
+};
+
 const forgetPasswordForUser = async (email: string) => {
   const isUserExist = await prisma.user.findUnique({
     where: {
@@ -383,6 +421,7 @@ export const AuthService = {
   changePasswordInDB,
   logoutUserInDB,
   verifyEmailForUser,
+  resendVerificationOTP,
   forgetPasswordForUser,
   resetPasswordForUser,
   googleLoginSuccessForUser,

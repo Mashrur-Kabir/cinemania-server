@@ -3,6 +3,7 @@ import { catchAsync } from "../../shared/catchAsync";
 import sendResponse from "../../shared/sendResponse";
 import { ReviewService } from "./review.service";
 import status from "http-status";
+import { IReviewFilterOptions } from "./review.interface";
 
 const createReview = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.id;
@@ -11,6 +12,23 @@ const createReview = catchAsync(async (req: Request, res: Response) => {
     statusCode: status.CREATED,
     success: true,
     message: "Review submitted! It will appear after moderation.",
+    data: result,
+  });
+});
+
+const updateReview = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const result = await ReviewService.updateReviewInDB(
+    req.user.id,
+    id,
+    req.body,
+  );
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message:
+      "Review updated! It will be re-moderated if it was previously approved.",
     data: result,
   });
 });
@@ -25,6 +43,19 @@ const toggleLike = catchAsync(async (req: Request, res: Response) => {
     success: true,
     message: "Action successful",
     data: result,
+  });
+});
+
+const getAllReviews = catchAsync(async (req: Request, res: Response) => {
+  const filters = req.query as unknown as IReviewFilterOptions;
+  const result = await ReviewService.getAllReviewsFromDB(filters);
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Reviews retrieved successfully!",
+    meta: result.meta, // Contains pagination info from QueryBuilder
+    data: result.data,
   });
 });
 
@@ -68,10 +99,27 @@ const getReports = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const deleteReview = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const { id: userId, role } = req.user; // Extracted from authMiddleware
+
+  await ReviewService.deleteReviewFromDB(userId, role, id);
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Review deleted successfully and media stats updated!",
+    data: null,
+  });
+});
+
 export const ReviewController = {
   createReview,
+  updateReview,
   toggleLike,
   changeStatus,
+  getAllReviews,
   reportReview,
   getReports,
+  deleteReview,
 };

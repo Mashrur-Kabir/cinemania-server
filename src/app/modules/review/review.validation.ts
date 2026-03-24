@@ -3,7 +3,7 @@ import { ReviewStatus } from "../../../generated/prisma/enums";
 
 const createReviewSchema = z.object({
   body: z.object({
-    rating: z.number().int().min(1).max(5),
+    rating: z.number().int().min(1).max(10),
     content: z.string().min(10, "Review must be at least 10 characters"),
     mediaId: z.uuid(),
     isSpoiler: z.boolean().optional(),

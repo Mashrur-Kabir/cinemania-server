@@ -20,7 +20,7 @@ const registerUser = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: status.CREATED,
     success: true,
-    message: "Welcome to CineTube! Registration successful.",
+    message: "Welcome to CineMania! Registration successful.",
     data: { ...rest },
   });
 });
@@ -131,6 +131,17 @@ const verifyEmail = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const resendOTP = catchAsync(async (req: Request, res: Response) => {
+  await AuthService.resendVerificationOTP(req.body.email);
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "OTP resent successfully!",
+    data: null,
+  });
+});
+
 const forgetPassword = catchAsync(async (req: Request, res: Response) => {
   await AuthService.forgetPasswordForUser(req.body.email);
 
@@ -196,6 +207,7 @@ export const AuthController = {
   changePassword,
   logoutUser,
   verifyEmail,
+  resendOTP,
   forgetPassword,
   resetPassword,
   googleLoginSuccess,

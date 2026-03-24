@@ -7,12 +7,24 @@ import { Role } from "../../../generated/prisma/enums";
 
 const router = Router();
 
+/**
+ * --- Public Routes ---
+ */
+router.get("/", ReviewController.getAllReviews);
+
 // User Interactions
 router.post(
   "/",
   checkAuth(Role.USER),
   validateRequest(ReviewValidation.createReviewSchema),
   ReviewController.createReview,
+);
+
+router.patch(
+  "/:id",
+  checkAuth(Role.USER),
+  validateRequest(ReviewValidation.updateReviewSchema), // Ensure you use the partial schema
+  ReviewController.updateReview,
 );
 
 router.post(
@@ -26,6 +38,12 @@ router.post(
   checkAuth(Role.USER, Role.ADMIN),
   validateRequest(ReviewValidation.reportReviewSchema),
   ReviewController.reportReview,
+);
+
+router.delete(
+  "/:id",
+  checkAuth(Role.USER, Role.ADMIN),
+  ReviewController.deleteReview,
 );
 
 // Admin Moderation

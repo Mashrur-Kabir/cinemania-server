@@ -47,6 +47,12 @@ const verifyEmailValidationSchema = z.object({
   }),
 });
 
+const resendOtpValidationSchema = z.object({
+  body: z.object({
+    email: z.email(),
+  }),
+});
+
 const forgetPasswordValidationSchema = z.object({
   body: z.object({
     email: z.email("Please provide a valid email address"),
@@ -69,6 +75,7 @@ export const AuthValidation = {
   loginUserValidationSchema,
   changePasswordValidationSchema,
   verifyEmailValidationSchema,
+  resendOtpValidationSchema,
   forgetPasswordValidationSchema,
   resetPasswordValidationSchema,
 };
