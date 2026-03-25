@@ -38,4 +38,7 @@ router.use("/watchedHistory", WatchedHistoryRoutes);
 //activity
 router.use("/activity", ActivityRoutes);
 
+//notification
+// router.use("/notification");
+
 export const IndexRoutes = router;

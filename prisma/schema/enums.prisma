@@ -40,3 +40,22 @@ enum ActivityAction {
     DIARY_LOG
     LIKE_REVIEW
 }
+
+enum NotificationType {
+    // Social Interactions
+    FOLLOW
+    LIKE_REVIEW
+    COMMENT_ADD // When someone comments on your review
+    COMMENT_REPLY // Someone replied to your specific comment
+
+    // Moderation (User Alerts)
+    REVIEW_APPROVED
+    REVIEW_REJECTED
+
+    // Content Alerts (For Users/Admins)
+    WATCHED_MEDIA
+    REPORT_ALERT // Alert Admins when a review is reported
+
+    // System
+    SYSTEM_ANNOUNCEMENT
+}

@@ -4,7 +4,11 @@ import status from "http-status";
 import { IWatchedHistoryPayload } from "./watchedHistory.interface";
 import { parseWatchedAt } from "../../helpers/module.helpers/parseWatchedAt";
 import { ActivityService } from "../activity/activity.service";
-import { ActivityAction } from "../../../generated/prisma/enums";
+import {
+  ActivityAction,
+  NotificationType,
+} from "../../../generated/prisma/enums";
+import { NotificationService } from "../notification/notification.service";
 
 const logToHistoryInDB = async (
   userId: string,
@@ -27,13 +31,12 @@ const logToHistoryInDB = async (
       },
     });
 
-    // Increment Media viewCount (Total times watched by everyone)
     await tx.media.update({
       where: { id: mediaId },
       data: { viewCount: { increment: 1 } },
     });
 
-    // LOG: Diary entry
+    // 1. ACTIVITY LOG: For the public following feed
     await ActivityService.createLogInDB(
       userId,
       ActivityAction.DIARY_LOG,
@@ -42,6 +45,31 @@ const logToHistoryInDB = async (
       { title: media.title },
       tx,
     );
+
+    /**
+     * 2. BROADCAST NOTIFICATION: To all followers
+     */
+    const followers = await tx.follow.findMany({
+      where: { followingId: userId },
+      select: { followerId: true },
+    });
+
+    if (followers.length > 0) {
+      const notificationPromises = followers.map((f) =>
+        NotificationService.createNotificationInDB(
+          {
+            userId: f.followerId, // The recipient
+            actorId: userId, // The person who watched (Actor)
+            type: NotificationType.WATCHED_MEDIA,
+            message: media.title, // Formatter uses this for the movie title
+            link: `/media/${media.id}`,
+          },
+          tx,
+        ),
+      );
+
+      await Promise.all(notificationPromises);
+    }
 
     return historyEntry;
   });

@@ -2,32 +2,32 @@ import { prisma } from "../../lib/prisma";
 import { AppError } from "../../errors/AppError";
 import status from "http-status";
 import { ActivityService } from "../activity/activity.service";
-import { ActivityAction } from "../../../generated/prisma/enums";
+import {
+  ActivityAction,
+  NotificationType,
+} from "../../../generated/prisma/enums";
+import { NotificationService } from "../notification/notification.service";
 
 const toggleFollowInDB = async (followerId: string, followingId: string) => {
-  // 1. Guard: Prevent self-following
   if (followerId === followingId) {
     throw new AppError(status.BAD_REQUEST, "You cannot follow yourself.");
   }
 
-  // 2. Check if target user exists
+  // 1. Get the target (Recipient)
   const targetUser = await prisma.user.findUnique({
     where: { id: followingId },
   });
   if (!targetUser) throw new AppError(status.NOT_FOUND, "User not found");
 
-  // 3. Toggle Logic
   const existingFollow = await prisma.follow.findUnique({
-    where: {
-      followerId_followingId: { followerId, followingId },
-    },
+    where: { followerId_followingId: { followerId, followingId } },
   });
 
   return await prisma.$transaction(async (tx) => {
     if (existingFollow) {
       await tx.follow.delete({ where: { id: existingFollow.id } });
 
-      // LOG: Unfollow
+      // Activity Log: Unfollow (Still logged for analytics)
       await ActivityService.createLogInDB(
         followerId,
         ActivityAction.UNFOLLOW,
@@ -39,15 +39,30 @@ const toggleFollowInDB = async (followerId: string, followingId: string) => {
 
       return { followed: false };
     } else {
+      // --- THE FOLLOW LOGIC ---
       await tx.follow.create({ data: { followerId, followingId } });
 
-      // LOG: Follow
+      // Activity Log: Public Feed
       await ActivityService.createLogInDB(
         followerId,
         ActivityAction.FOLLOW,
         "User",
         followingId,
         { name: targetUser.name },
+        tx,
+      );
+
+      // 2. Notification (Private Inbox)
+      // We don't need to pass the actor's name here because the Formatter
+      // will pull it from the 'actor' relation when the user opens their inbox!
+      await NotificationService.createNotificationInDB(
+        {
+          userId: followingId,
+          actorId: followerId,
+          type: NotificationType.FOLLOW,
+          message: "started following you.", // Fallback/Base message
+          link: `/profile/${followerId}`,
+        },
         tx,
       );
 

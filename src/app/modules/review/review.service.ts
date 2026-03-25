@@ -4,6 +4,7 @@ import { AppError } from "../../errors/AppError";
 import status from "http-status";
 import {
   ActivityAction,
+  NotificationType,
   ReviewStatus,
   Role,
 } from "../../../generated/prisma/enums";
@@ -16,6 +17,7 @@ import {
 } from "./review.constants";
 import { syncMediaStats } from "../../helpers/module.helpers/syncMediaStats";
 import { ActivityService } from "../activity/activity.service";
+import { NotificationService } from "../notification/notification.service";
 
 const createReviewInDB = async (userId: string, payload: IReviewPayload) => {
   // 1. Prevent multiple reviews for same media by same user
@@ -94,36 +96,48 @@ const updateReviewStatus = async (
   newStatus: ReviewStatus,
 ) => {
   return await prisma.$transaction(async (tx) => {
+    // 1. Update status and fetch Media title to store in notification 'message'
     const review = await tx.review.update({
       where: { id: reviewId },
       data: { status: newStatus },
+      include: { media: { select: { title: true } } },
     });
 
-    // If approved or moved out of approved, sync the media stats
+    // 2. Sync Stats
     await syncMediaStats(review.mediaId, tx);
+
+    // 3. NOTIFICATION: To the author
+    const type =
+      newStatus === ReviewStatus.APPROVED
+        ? NotificationType.REVIEW_APPROVED
+        : NotificationType.REVIEW_REJECTED;
+
+    await NotificationService.createNotificationInDB(
+      {
+        userId: review.userId,
+        type,
+        message: review.media.title, // We store the title so the formatter can use it
+        link: `/reviews/${reviewId}`,
+      },
+      tx,
+    );
+
     return review;
   });
 };
 
 const toggleLikeInDB = async (userId: string, reviewId: string) => {
-  // 1. Fetch the review to check its status (outside tx is fine for read)
-  const review = await prisma.review.findUnique({
-    where: { id: reviewId },
-  });
-
-  // 2. Safeguard
-  if (!review || review.isDeleted) {
+  const review = await prisma.review.findUnique({ where: { id: reviewId } });
+  if (!review || review.isDeleted)
     throw new AppError(status.NOT_FOUND, "Review not found");
-  }
 
   if (review.status !== ReviewStatus.APPROVED) {
     throw new AppError(
       status.BAD_REQUEST,
-      "You can only like reviews that have been approved by moderators.",
+      "You can only like approved reviews.",
     );
   }
 
-  // 3. Check for existing like
   const existingLike = await prisma.like.findUnique({
     where: { userId_reviewId: { userId, reviewId } },
   });
@@ -131,40 +145,49 @@ const toggleLikeInDB = async (userId: string, reviewId: string) => {
   return await prisma.$transaction(async (tx) => {
     if (existingLike) {
       await tx.like.delete({ where: { id: existingLike.id } });
-
       return await tx.review.update({
         where: { id: reviewId },
         data: { likeCount: { decrement: 1 } },
       });
     } else {
-      // Add Like
       await tx.like.create({ data: { userId, reviewId } });
-
       const updatedReview = await tx.review.update({
         where: { id: reviewId },
         data: { likeCount: { increment: 1 } },
       });
 
-      // Fetch the Author's name to make the log descriptive
+      // 1. Fetch Author for the Activity Log Metadata
       const author = await tx.user.findUnique({
         where: { id: review.userId },
         select: { name: true },
       });
 
-      // LOG: Like Activity
-      // We pass the tx so this log is only created if the like is successful
+      // 2. ACTIVITY LOG: Public Feed
       await ActivityService.createLogInDB(
         userId,
         ActivityAction.LIKE_REVIEW,
         "Review",
         reviewId,
         {
-          reviewAuthorId: review.userId,
           authorName: author?.name || "a user",
           mediaId: review.mediaId,
         },
         tx,
       );
+
+      // 3. NOTIFICATION: Only if liking someone else's review
+      if (review.userId !== userId) {
+        await NotificationService.createNotificationInDB(
+          {
+            userId: review.userId,
+            actorId: userId, // The person who liked it
+            type: NotificationType.LIKE_REVIEW,
+            message: "liked your review.",
+            link: `/reviews/${reviewId}`,
+          },
+          tx,
+        );
+      }
 
       return updatedReview;
     }
@@ -216,16 +239,35 @@ const reportReviewInDB = async (
   reviewId: string,
   reason: string,
 ) => {
-  // Check if review exists
   const review = await prisma.review.findUnique({ where: { id: reviewId } });
   if (!review) throw new AppError(status.NOT_FOUND, "Review not found");
 
-  return await prisma.reviewReport.create({
-    data: {
-      userId,
-      reviewId,
-      reason,
-    },
+  return await prisma.$transaction(async (tx) => {
+    const report = await tx.reviewReport.create({
+      data: { userId, reviewId, reason },
+    });
+
+    // 1. NOTIFICATION: Fetch all Admins to alert them
+    const admins = await tx.user.findMany({
+      where: { role: Role.ADMIN, isDeleted: false },
+      select: { id: true },
+    });
+
+    const notificationPromises = admins.map((admin) =>
+      NotificationService.createNotificationInDB(
+        {
+          userId: admin.id,
+          actorId: userId, // The reporter
+          type: NotificationType.REPORT_ALERT,
+          message: reason, // Store reason for the admin to see in their inbox
+          link: `/admin/reports`,
+        },
+        tx,
+      ),
+    );
+
+    await Promise.all(notificationPromises);
+    return report;
   });
 };
 
@@ -276,7 +318,7 @@ const deleteReviewFromDB = async (
       data: {
         isDeleted: true,
         deletedAt: new Date(),
-        status: "REJECTED", // Optional: move out of APPROVED to keep counters clean
+        status: ReviewStatus.REJECTED, // Optional: move out of APPROVED to keep counters clean
       },
     });
 

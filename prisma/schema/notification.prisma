@@ -1,13 +1,17 @@
 model Notification {
-    id      String  @id @default(uuid())
-    userId  String
-    message String
-    isRead  Boolean @default(false)
+    id        String           @id @default(uuid())
+    userId    String // The Recipient (the person being notified)
+    actorId   String? // The Actor (the person who triggered it, e.g., Horus)
+    type      NotificationType
+    message   String
+    link      String? // e.g., "/reviews/uuid" or "/profile/horus"
+    isRead    Boolean          @default(false)
+    createdAt DateTime         @default(now())
 
-    createdAt DateTime @default(now())
+    // Relations
+    user  User  @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+    actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
 
-    // Relation: Delete notifications if user is deleted
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    @@index([userId]) // Critical for loading a user's inbox quickly
+    @@index([userId])
+    @@index([createdAt])
 }

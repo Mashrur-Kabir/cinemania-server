@@ -2,12 +2,17 @@ import { prisma } from "../../lib/prisma";
 import { ICommentPayload } from "./comment.interface";
 import { AppError } from "../../errors/AppError";
 import status from "http-status";
-import { ReviewStatus } from "../../../generated/prisma/enums";
+import {
+  NotificationType,
+  ReviewStatus,
+} from "../../../generated/prisma/enums";
+import { NotificationService } from "../notification/notification.service";
 
 const createCommentInDB = async (userId: string, payload: ICommentPayload) => {
   // 1. Logic Guard: Ensure the target Review is APPROVED and not deleted
   const review = await prisma.review.findUnique({
     where: { id: payload.reviewId },
+    include: { media: { select: { title: true } } },
   });
 
   if (!review || review.isDeleted) {
@@ -51,6 +56,45 @@ const createCommentInDB = async (userId: string, payload: ICommentPayload) => {
       data: { commentCount: { increment: 1 } },
     });
 
+    const notifiedUserIds = new Set<string>(); // Keep track of who we already pinged
+
+    // Scenario A: Reply to a comment
+    if (payload.parentId) {
+      const parentComment = await tx.comment.findUnique({
+        where: { id: payload.parentId },
+      });
+
+      if (parentComment && parentComment.userId !== userId) {
+        await NotificationService.createNotificationInDB(
+          {
+            userId: parentComment.userId,
+            actorId: userId,
+            type: NotificationType.COMMENT_REPLY,
+            message: "replied to your comment.",
+            link: `/reviews/${payload.reviewId}`,
+          },
+          tx,
+        );
+
+        notifiedUserIds.add(parentComment.userId); // Mark as notified
+      }
+    }
+
+    // Scenario B: Direct comment on Review
+    // Only notify if they aren't the actor AND weren't already notified as a parent
+    if (review.userId !== userId && !notifiedUserIds.has(review.userId)) {
+      await NotificationService.createNotificationInDB(
+        {
+          userId: review.userId,
+          actorId: userId,
+          type: NotificationType.COMMENT_ADD,
+          message: review.media.title,
+          link: `/reviews/${payload.reviewId}`,
+        },
+        tx,
+      );
+    }
+
     return comment;
   });
 };
@@ -76,7 +120,7 @@ const updateCommentInDB = async (
 
   return await prisma.comment.update({
     where: { id: commentId },
-    data: { content },
+    data: { content, isEdited: true },
   });
 };
 

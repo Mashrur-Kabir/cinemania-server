@@ -13,7 +13,7 @@ export const initCronTasks = () => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const deleted = await prisma.activityLog.deleteMany({
+      const deletedActivity = await prisma.activityLog.deleteMany({
         where: {
           createdAt: {
             lt: thirtyDaysAgo, // Delete everything older than 30 days
@@ -22,7 +22,18 @@ export const initCronTasks = () => {
       });
 
       logger.success(
-        `Cleanup complete. Removed ${deleted.count} old activity logs.`,
+        `Cleanup complete. Removed ${deletedActivity.count} old activity logs.`,
+      );
+
+      const deletedNotif = await prisma.notification.deleteMany({
+        where: {
+          isRead: true,
+          createdAt: { lt: thirtyDaysAgo }, // Delete READ notifications older than 30 days
+        },
+      });
+
+      logger.success(
+        `Cleanup complete. Removed ${deletedNotif.count} old notifications.`,
       );
     } catch (error) {
       logger.error("Failed to clean up old activity logs:", error);
