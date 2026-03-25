@@ -2,14 +2,50 @@ import { prisma } from "../../lib/prisma";
 import { ICommentPayload } from "./comment.interface";
 import { AppError } from "../../errors/AppError";
 import status from "http-status";
+import { ReviewStatus } from "../../../generated/prisma/enums";
 
 const createCommentInDB = async (userId: string, payload: ICommentPayload) => {
+  // 1. Logic Guard: Ensure the target Review is APPROVED and not deleted
+  const review = await prisma.review.findUnique({
+    where: { id: payload.reviewId },
+  });
+
+  if (!review || review.isDeleted) {
+    throw new AppError(status.NOT_FOUND, "Review not found.");
+  }
+
+  if (review.status !== ReviewStatus.APPROVED) {
+    throw new AppError(
+      status.BAD_REQUEST,
+      "You cannot comment on a review that hasn't been approved yet.",
+    );
+  }
+
+  // 2. Logic Guard: If it's a reply, ensure parent exists
+  if (payload.parentId) {
+    const parentComment = await prisma.comment.findUnique({
+      where: { id: payload.parentId },
+    });
+    if (!parentComment || parentComment.isDeleted) {
+      throw new AppError(
+        status.NOT_FOUND,
+        "The comment you are replying to no longer exists.",
+      );
+    }
+    // Prevent replying to a comment in a different review thread
+    if (parentComment.reviewId !== payload.reviewId) {
+      throw new AppError(
+        status.BAD_REQUEST,
+        "Parent comment belongs to a different review.",
+      );
+    }
+  }
+
   return await prisma.$transaction(async (tx) => {
     const comment = await tx.comment.create({
       data: { ...payload, userId },
     });
 
-    // Update review's comment count
     await tx.review.update({
       where: { id: payload.reviewId },
       data: { commentCount: { increment: 1 } },
@@ -26,11 +62,16 @@ const updateCommentInDB = async (
 ) => {
   const comment = await prisma.comment.findUnique({ where: { id: commentId } });
 
+  // Industry Standard: Admins should NOT edit user content, only delete it.
   if (!comment || comment.userId !== userId) {
     throw new AppError(
       status.FORBIDDEN,
       "You can only edit your own comments.",
     );
+  }
+
+  if (comment.isDeleted) {
+    throw new AppError(status.BAD_REQUEST, "Cannot edit a deleted comment.");
   }
 
   return await prisma.comment.update({
@@ -39,17 +80,28 @@ const updateCommentInDB = async (
   });
 };
 
-const deleteCommentFromDB = async (userId: string, commentId: string) => {
+const deleteCommentFromDB = async (
+  userId: string,
+  role: string,
+  commentId: string,
+) => {
   const comment = await prisma.comment.findUnique({ where: { id: commentId } });
 
-  if (!comment || comment.userId !== userId) {
+  if (!comment) {
+    throw new AppError(status.NOT_FOUND, "Comment not found.");
+  }
+
+  // 3. Permission Fix: Allow Owner OR Admin
+  const isOwner = comment.userId === userId;
+  const isAdmin = role === "ADMIN";
+
+  if (!isOwner && !isAdmin) {
     throw new AppError(
       status.FORBIDDEN,
-      "You can only delete your own comments.",
+      "You do not have permission to delete this comment.",
     );
   }
 
-  // Soft delete: We keep the record but mark it as deleted to preserve the thread
   return await prisma.comment.update({
     where: { id: commentId },
     data: {

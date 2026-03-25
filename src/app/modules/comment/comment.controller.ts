@@ -35,8 +35,9 @@ const updateComment = catchAsync(async (req: Request, res: Response) => {
 
 const deleteComment = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
+  const { id: userId, role } = req.user; // Role is essential for Admin moderation
 
-  await CommentService.deleteCommentFromDB(req.user.id, id);
+  await CommentService.deleteCommentFromDB(userId, role, id);
 
   sendResponse(res, {
     statusCode: status.OK,
