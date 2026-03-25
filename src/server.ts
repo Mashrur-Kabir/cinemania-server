@@ -1,4 +1,5 @@
 import app from "./app";
+import { initCronTasks } from "./app/utils/cronTasks";
 import { logger } from "./app/utils/logger";
 import { seedAdmin } from "./app/utils/seed";
 import { envVars } from "./config/env";
