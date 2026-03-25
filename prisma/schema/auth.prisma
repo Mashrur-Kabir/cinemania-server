@@ -14,15 +14,18 @@ model User {
   sessions           Session[]
   accounts           Account[]
 
-  reviews       Review[]
-  comments      Comment[]
-  likes         Like[]
-  watchlist     Watchlist[]
-  payments      Payment[]
-  subscriptions Subscription[]
-  reviewReports ReviewReport[]
-  activityLogs  ActivityLog[]
-  notifications Notification[]
+  reviews          Review[]
+  comments         Comment[]
+  likes            Like[]
+  watchlist        Watchlist[]
+  payments         Payment[]
+  subscriptions    Subscription[]
+  reviewReports    ReviewReport[]
+  activityLogs     ActivityLog[]
+  notifications    Notification[]
+  followers        Follow[]         @relation("UserFollowing") // People following this user
+  following        Follow[]         @relation("UserFollowers") // People this user follows
+  watchedHistories WatchedHistory[]
 
   @@unique([email])
   @@index([status]) // Added: Fast lookup for active/blocked users

@@ -5,7 +5,7 @@ export const validateRequest = (zodSchema: ZodObject) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       // 1. Handle stringified data (form-data/multer)
-      if (req.body.data && typeof req.body.data === "string") {
+      if (req.body && req.body.data && typeof req.body.data === "string") {
         req.body = JSON.parse(req.body.data);
       }
 
@@ -18,7 +18,11 @@ export const validateRequest = (zodSchema: ZodObject) => {
       });
 
       // 3. Sanitize/Update req with validated data
-      req.body = parsedResult.body;
+      //Only assign if the key exists in the parsed result.
+      //This prevents setting req.body to 'undefined' for GET requests.
+      if (parsedResult.body) {
+        req.body = parsedResult.body;
+      }
 
       // Use Object.assign for query/params to avoid the "Getter only" error
       if (parsedResult.query) {

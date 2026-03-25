@@ -1,0 +1,155 @@
+import { prisma } from "../../lib/prisma";
+import { AppError } from "../../errors/AppError";
+import status from "http-status";
+import { IWatchedHistoryPayload } from "./watchedHistory.interface";
+import { parseWatchedAt } from "../../helpers/module.helpers/parseWatchedAt";
+
+const logToHistoryInDB = async (
+  userId: string,
+  payload: IWatchedHistoryPayload,
+) => {
+  const { mediaId, watchedAt, notes, isRewatch } = payload;
+
+  // 1. Verify Media exists
+  const media = await prisma.media.findUnique({ where: { id: mediaId } });
+  if (!media) throw new AppError(status.NOT_FOUND, "Media not found");
+
+  return await prisma.$transaction(async (tx) => {
+    // 2. Create the History Entry
+    const historyEntry = await tx.watchedHistory.create({
+      data: {
+        userId,
+        mediaId,
+        watchedAt: parseWatchedAt(watchedAt as string),
+        notes,
+        isRewatch: isRewatch || false,
+      },
+    });
+
+    // 3. Increment Media viewCount (Total times watched by everyone)
+    await tx.media.update({
+      where: { id: mediaId },
+      data: { viewCount: { increment: 1 } },
+    });
+
+    return historyEntry;
+  });
+};
+
+const getUserDiaryFromDB = async (userId: string) => {
+  return await prisma.watchedHistory.findMany({
+    where: { userId },
+    include: {
+      media: {
+        select: { title: true, slug: true, releaseYear: true, pricing: true },
+      },
+    },
+    orderBy: { watchedAt: "desc" },
+  });
+};
+
+const updateHistoryInDB = async (
+  userId: string,
+  historyId: string,
+  payload: Partial<IWatchedHistoryPayload>,
+) => {
+  const history = await prisma.watchedHistory.findUnique({
+    where: { id: historyId },
+  });
+
+  if (!history) throw new AppError(status.NOT_FOUND, "Entry not found");
+  if (history.userId !== userId)
+    throw new AppError(status.FORBIDDEN, "Unauthorized");
+
+  return await prisma.watchedHistory.update({
+    where: { id: historyId },
+    data: {
+      ...payload,
+      watchedAt: payload.watchedAt
+        ? new Date(payload.watchedAt)
+        : history.watchedAt,
+    },
+  });
+};
+
+const getPersonalStatsFromDB = async (userId: string) => {
+  const now = new Date();
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // 1. Total watches & Watches this month
+  const totalCount = await prisma.watchedHistory.count({ where: { userId } });
+  const monthCount = await prisma.watchedHistory.count({
+    where: {
+      userId,
+      watchedAt: { gte: firstDayOfMonth },
+    },
+  });
+
+  // 2. Genre Breakdown (Requires joining Media and Genre)
+  const genreStats = await prisma.watchedHistory.findMany({
+    where: { userId },
+    include: {
+      media: {
+        include: { genres: { include: { genre: true } } },
+      },
+    },
+  });
+
+  // Simple aggregation for "Top Genre"
+  const genreMap: Record<string, number> = {};
+  genreStats.forEach((entry) => {
+    entry.media.genres.forEach((g) => {
+      genreMap[g.genre.name] = (genreMap[g.genre.name] || 0) + 1;
+    });
+  });
+
+  return {
+    totalMoviesWatched: totalCount,
+    watchedThisMonth: monthCount,
+    genreBreakdown: genreMap,
+  };
+};
+
+const deleteHistoryFromDB = async (
+  userId: string,
+  role: string,
+  historyId: string,
+) => {
+  // 1. Find the entry
+  const history = await prisma.watchedHistory.findUnique({
+    where: { id: historyId },
+  });
+
+  if (!history) throw new AppError(status.NOT_FOUND, "Diary entry not found");
+
+  // 2. Authorization Check: Only owner or admin can delete
+  if (role !== "ADMIN" && history.userId !== userId) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "You are not authorized to delete this entry",
+    );
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    // 3. Delete the record
+    const deletedEntry = await tx.watchedHistory.delete({
+      where: { id: historyId },
+    });
+
+    // 4. Decrement Media viewCount
+    await tx.media.update({
+      where: { id: history.mediaId },
+      data: { viewCount: { decrement: 1 } },
+    });
+
+    return deletedEntry;
+  });
+};
+
+export const WatchedHistoryService = {
+  logToHistoryInDB,
+  getUserDiaryFromDB,
+  updateHistoryInDB,
+  getPersonalStatsFromDB,
+  deleteHistoryFromDB,
+};
