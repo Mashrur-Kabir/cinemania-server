@@ -13,6 +13,9 @@ const bootstrap = async () => {
     // seed admin first:
     await seedAdmin();
 
+    // Start the cron scheduler
+    initCronTasks();
+
     server = app.listen(PORT, () => {
       logger.success(`Server is running on http://localhost:${PORT}`);
     });

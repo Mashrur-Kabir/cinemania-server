@@ -3,6 +3,8 @@ import { AppError } from "../../errors/AppError";
 import status from "http-status";
 import { IWatchedHistoryPayload } from "./watchedHistory.interface";
 import { parseWatchedAt } from "../../helpers/module.helpers/parseWatchedAt";
+import { ActivityService } from "../activity/activity.service";
+import { ActivityAction } from "../../../generated/prisma/enums";
 
 const logToHistoryInDB = async (
   userId: string,
@@ -15,7 +17,6 @@ const logToHistoryInDB = async (
   if (!media) throw new AppError(status.NOT_FOUND, "Media not found");
 
   return await prisma.$transaction(async (tx) => {
-    // 2. Create the History Entry
     const historyEntry = await tx.watchedHistory.create({
       data: {
         userId,
@@ -26,11 +27,21 @@ const logToHistoryInDB = async (
       },
     });
 
-    // 3. Increment Media viewCount (Total times watched by everyone)
+    // Increment Media viewCount (Total times watched by everyone)
     await tx.media.update({
       where: { id: mediaId },
       data: { viewCount: { increment: 1 } },
     });
+
+    // LOG: Diary entry
+    await ActivityService.createLogInDB(
+      userId,
+      ActivityAction.DIARY_LOG,
+      "Media",
+      mediaId,
+      { title: media.title },
+      tx,
+    );
 
     return historyEntry;
   });

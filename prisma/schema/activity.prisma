@@ -1,9 +1,13 @@
 model ActivityLog {
-    id       String  @id @default(uuid())
-    userId   String?
-    action   String
-    entity   String
-    entityId String?
+    id       String         @id @default(uuid())
+    userId   String? // The "Actor" (can be null if system-generated)
+    action   ActivityAction
+    entity   String // e.g., "User", "Media", "Review"
+    entityId String? // The ID of the thing being acted upon
+
+    // The "Secret Sauce": Store names/titles here so you don't have to join tables
+    // Example: { "targetName": "Horus", "mediaTitle": "Inception" }
+    metadata Json?
 
     createdAt DateTime @default(now())
 

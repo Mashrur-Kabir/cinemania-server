@@ -2,7 +2,11 @@ import { prisma } from "../../lib/prisma";
 import { IReviewFilterOptions, IReviewPayload } from "./review.interface";
 import { AppError } from "../../errors/AppError";
 import status from "http-status";
-import { ReviewStatus } from "../../../generated/prisma/enums";
+import {
+  ActivityAction,
+  ReviewStatus,
+  Role,
+} from "../../../generated/prisma/enums";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { Prisma, Review } from "../../../generated/prisma/client";
 import {
@@ -11,6 +15,7 @@ import {
   reviewSearchableFields,
 } from "./review.constants";
 import { syncMediaStats } from "../../helpers/module.helpers/syncMediaStats";
+import { ActivityService } from "../activity/activity.service";
 
 const createReviewInDB = async (userId: string, payload: IReviewPayload) => {
   // 1. Prevent multiple reviews for same media by same user
@@ -25,8 +30,27 @@ const createReviewInDB = async (userId: string, payload: IReviewPayload) => {
     );
   }
 
-  return await prisma.review.create({
-    data: { ...payload, userId },
+  return await prisma.$transaction(async (tx) => {
+    const review = await tx.review.create({
+      data: { ...payload, userId },
+    });
+
+    // We need the media title for the log
+    const media = await tx.media.findUnique({ where: { id: payload.mediaId } });
+
+    await ActivityService.createLogInDB(
+      userId,
+      ActivityAction.REVIEW_CREATE,
+      "Review",
+      review.id,
+      {
+        mediaTitle: media?.title,
+        rating: payload.rating,
+      },
+      tx,
+    );
+
+    return review;
   });
 };
 
@@ -82,12 +106,12 @@ const updateReviewStatus = async (
 };
 
 const toggleLikeInDB = async (userId: string, reviewId: string) => {
-  // 1. Fetch the review to check its status
+  // 1. Fetch the review to check its status (outside tx is fine for read)
   const review = await prisma.review.findUnique({
     where: { id: reviewId },
   });
 
-  // 2. Safeguard: Only allow likes on Approved and non-deleted reviews
+  // 2. Safeguard
   if (!review || review.isDeleted) {
     throw new AppError(status.NOT_FOUND, "Review not found");
   }
@@ -107,20 +131,64 @@ const toggleLikeInDB = async (userId: string, reviewId: string) => {
   return await prisma.$transaction(async (tx) => {
     if (existingLike) {
       await tx.like.delete({ where: { id: existingLike.id } });
+
       return await tx.review.update({
         where: { id: reviewId },
         data: { likeCount: { decrement: 1 } },
       });
     } else {
+      // Add Like
       await tx.like.create({ data: { userId, reviewId } });
-      return await tx.review.update({
+
+      const updatedReview = await tx.review.update({
         where: { id: reviewId },
         data: { likeCount: { increment: 1 } },
       });
+
+      // Fetch the Author's name to make the log descriptive
+      const author = await tx.user.findUnique({
+        where: { id: review.userId },
+        select: { name: true },
+      });
+
+      // LOG: Like Activity
+      // We pass the tx so this log is only created if the like is successful
+      await ActivityService.createLogInDB(
+        userId,
+        ActivityAction.LIKE_REVIEW,
+        "Review",
+        reviewId,
+        {
+          reviewAuthorId: review.userId,
+          authorName: author?.name || "a user",
+          mediaId: review.mediaId,
+        },
+        tx,
+      );
+
+      return updatedReview;
     }
   });
 };
-const getAllReviewsFromDB = async (filters: IReviewFilterOptions) => {
+
+const getAllReviewsFromDB = async (
+  filters: IReviewFilterOptions,
+  userRole?: string,
+) => {
+  // 1. Define base conditions
+  const baseConditions: Prisma.ReviewWhereInput = {
+    isDeleted: false,
+  };
+
+  /**
+   * 2. Role-based Visibility Logic
+   * If the user is NOT an Admin, they can ONLY see Approved reviews.
+   * Admins can see PENDING/REJECTED for moderation purposes.
+   */
+  if (userRole !== Role.ADMIN) {
+    baseConditions.status = ReviewStatus.APPROVED;
+  }
+
   const reviewQuery = new QueryBuilder<
     Review,
     Prisma.ReviewWhereInput,
@@ -133,7 +201,7 @@ const getAllReviewsFromDB = async (filters: IReviewFilterOptions) => {
   const result = await reviewQuery
     .search()
     .filter()
-    .where({ isDeleted: false })
+    .where(baseConditions)
     .dynamicInclude(reviewIncludeConfig)
     .sort()
     .paginate()

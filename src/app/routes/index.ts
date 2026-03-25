@@ -7,6 +7,7 @@ import { CommentRoutes } from "../modules/comment/comment.routes";
 import { WatchlistRoutes } from "../modules/watchlist/watchlist.routes";
 import { FollowRoutes } from "../modules/follow/follow.routes";
 import { WatchedHistoryRoutes } from "../modules/watchedHistory/watchedHistory.routes";
+import { ActivityRoutes } from "../modules/activity/activity.routes";
 
 const router = Router();
 
@@ -33,5 +34,8 @@ router.use("/follow", FollowRoutes);
 
 //watchedHistory
 router.use("/watchedHistory", WatchedHistoryRoutes);
+
+//activity
+router.use("/activity", ActivityRoutes);
 
 export const IndexRoutes = router;

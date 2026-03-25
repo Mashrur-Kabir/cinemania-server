@@ -8,9 +8,13 @@ import { Role } from "../../../generated/prisma/enums";
 const router = Router();
 
 /**
- * --- Public Routes ---
+ * --- Get Routes ---
  */
-router.get("/", ReviewController.getAllReviews);
+router.get(
+  "/",
+  checkAuth(Role.USER, Role.ADMIN),
+  ReviewController.getAllReviews,
+);
 
 // User Interactions
 router.post(

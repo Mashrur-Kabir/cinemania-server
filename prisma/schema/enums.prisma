@@ -30,3 +30,13 @@ enum UserStatus {
     BLOCKED
     DELETED
 }
+
+enum ActivityAction {
+    FOLLOW
+    UNFOLLOW
+    WATCHLIST_ADD
+    WATCHLIST_REMOVE
+    REVIEW_CREATE
+    DIARY_LOG
+    LIKE_REVIEW
+}

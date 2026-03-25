@@ -48,7 +48,10 @@ const toggleLike = catchAsync(async (req: Request, res: Response) => {
 
 const getAllReviews = catchAsync(async (req: Request, res: Response) => {
   const filters = req.query as unknown as IReviewFilterOptions;
-  const result = await ReviewService.getAllReviewsFromDB(filters);
+
+  // Use optional chaining in case guests (unauthenticated) can also view reviews
+  const userRole = req.user?.role;
+  const result = await ReviewService.getAllReviewsFromDB(filters, userRole);
 
   sendResponse(res, {
     statusCode: status.OK,

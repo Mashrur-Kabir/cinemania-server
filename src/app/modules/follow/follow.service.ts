@@ -1,6 +1,8 @@
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../errors/AppError";
 import status from "http-status";
+import { ActivityService } from "../activity/activity.service";
+import { ActivityAction } from "../../../generated/prisma/enums";
 
 const toggleFollowInDB = async (followerId: string, followingId: string) => {
   // 1. Guard: Prevent self-following
@@ -21,15 +23,37 @@ const toggleFollowInDB = async (followerId: string, followingId: string) => {
     },
   });
 
-  if (existingFollow) {
-    await prisma.follow.delete({ where: { id: existingFollow.id } });
-    return { followed: false };
-  } else {
-    await prisma.follow.create({
-      data: { followerId, followingId },
-    });
-    return { followed: true };
-  }
+  return await prisma.$transaction(async (tx) => {
+    if (existingFollow) {
+      await tx.follow.delete({ where: { id: existingFollow.id } });
+
+      // LOG: Unfollow
+      await ActivityService.createLogInDB(
+        followerId,
+        ActivityAction.UNFOLLOW,
+        "User",
+        followingId,
+        { name: targetUser.name },
+        tx,
+      );
+
+      return { followed: false };
+    } else {
+      await tx.follow.create({ data: { followerId, followingId } });
+
+      // LOG: Follow
+      await ActivityService.createLogInDB(
+        followerId,
+        ActivityAction.FOLLOW,
+        "User",
+        followingId,
+        { name: targetUser.name },
+        tx,
+      );
+
+      return { followed: true };
+    }
+  });
 };
 
 const getFollowersList = async (userId: string) => {

@@ -1,40 +1,60 @@
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../errors/AppError";
 import status from "http-status";
+import { ActivityService } from "../activity/activity.service";
+import { ActivityAction } from "../../../generated/prisma/enums";
 
 const toggleWatchlistInDB = async (userId: string, mediaId: string) => {
-  // 1. Check if media exists
+  // 1. Check if media exists (Need title for metadata)
   const media = await prisma.media.findUnique({ where: { id: mediaId } });
   if (!media) throw new AppError(status.NOT_FOUND, "Media not found");
 
-  // 2. Check if already in watchlist
+  // 2. Check current status
   const existingEntry = await prisma.watchlist.findUnique({
     where: { userId_mediaId: { userId, mediaId } },
   });
 
   return await prisma.$transaction(async (tx) => {
     if (existingEntry) {
-      // Remove from watchlist
+      // --- REMOVE LOGIC ---
       await tx.watchlist.delete({ where: { id: existingEntry.id } });
 
-      // Decrement Media watchCount
       await tx.media.update({
         where: { id: mediaId },
         data: { watchCount: { decrement: 1 } },
       });
 
+      // LOG: Watchlist Remove
+      await ActivityService.createLogInDB(
+        userId,
+        ActivityAction.WATCHLIST_REMOVE,
+        "Media",
+        mediaId,
+        { title: media.title },
+        tx,
+      );
+
       return { added: false };
     } else {
-      // Add to watchlist
+      // --- ADD LOGIC ---
       await tx.watchlist.create({
         data: { userId, mediaId },
       });
 
-      // Increment Media watchCount
       await tx.media.update({
         where: { id: mediaId },
         data: { watchCount: { increment: 1 } },
       });
+
+      // LOG: Watchlist Add
+      await ActivityService.createLogInDB(
+        userId,
+        ActivityAction.WATCHLIST_ADD,
+        "Media",
+        mediaId,
+        { title: media.title },
+        tx,
+      );
 
       return { added: true };
     }
