@@ -1,0 +1,108 @@
+import { prisma } from "../../lib/prisma";
+import { AppError } from "../../errors/AppError";
+import status from "http-status";
+
+const toggleWatchlistInDB = async (userId: string, mediaId: string) => {
+  // 1. Check if media exists
+  const media = await prisma.media.findUnique({ where: { id: mediaId } });
+  if (!media) throw new AppError(status.NOT_FOUND, "Media not found");
+
+  // 2. Check if already in watchlist
+  const existingEntry = await prisma.watchlist.findUnique({
+    where: { userId_mediaId: { userId, mediaId } },
+  });
+
+  return await prisma.$transaction(async (tx) => {
+    if (existingEntry) {
+      // Remove from watchlist
+      await tx.watchlist.delete({ where: { id: existingEntry.id } });
+
+      // Decrement Media watchCount
+      await tx.media.update({
+        where: { id: mediaId },
+        data: { watchCount: { decrement: 1 } },
+      });
+
+      return { added: false };
+    } else {
+      // Add to watchlist
+      await tx.watchlist.create({
+        data: { userId, mediaId },
+      });
+
+      // Increment Media watchCount
+      await tx.media.update({
+        where: { id: mediaId },
+        data: { watchCount: { increment: 1 } },
+      });
+
+      return { added: true };
+    }
+  });
+};
+
+const getMyWatchlistFromDB = async (userId: string) => {
+  return await prisma.watchlist.findMany({
+    where: { userId },
+    include: {
+      media: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          releaseYear: true,
+          averageRating: true,
+          pricing: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+};
+
+/**
+ * Checks if a specific media is in the user's watchlist.
+ * Crucial for the Frontend UI button state (Add vs Remove).
+ */
+const checkWatchlistStatus = async (userId: string, mediaId: string) => {
+  const entry = await prisma.watchlist.findUnique({
+    where: {
+      userId_mediaId: { userId, mediaId },
+    },
+  });
+
+  return { isWatchlisted: !!entry };
+};
+
+/**
+ * Bulk clear for users who want a fresh start.
+ */
+const clearWatchlistInDB = async (userId: string) => {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Get all mediaIds in user's watchlist before deleting
+    const list = await tx.watchlist.findMany({
+      where: { userId },
+      select: { mediaId: true },
+    });
+
+    const mediaIds = list.map((item) => item.mediaId);
+
+    // 2. Decrement counters for all these movies
+    await tx.media.updateMany({
+      where: { id: { in: mediaIds } },
+      data: { watchCount: { decrement: 1 } },
+    });
+
+    // 3. Delete the records
+    return await tx.watchlist.deleteMany({
+      where: { userId },
+    });
+  });
+};
+
+export const WatchlistService = {
+  toggleWatchlistInDB,
+  getMyWatchlistFromDB,
+  checkWatchlistStatus,
+  clearWatchlistInDB,
+};
