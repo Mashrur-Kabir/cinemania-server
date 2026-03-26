@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "../../lib/prisma";
 import { IMediaFilterOptions, IMediaPayload } from "./media.interface";
 import { AppError } from "../../errors/AppError";
@@ -82,7 +83,7 @@ const updateProgressInDB = async (
 const getAllMediaFromDB = async (filters: IMediaFilterOptions) => {
   // 1. Initialize QueryBuilder with the model, raw filters, and config constants
   const mediaQuery = new QueryBuilder<
-    Media, // Replace 'any' with your Media type
+    Media,
     Prisma.MediaWhereInput,
     Prisma.MediaInclude
   >(prisma.media, filters, {
@@ -95,13 +96,21 @@ const getAllMediaFromDB = async (filters: IMediaFilterOptions) => {
     .search()
     .filter()
     .where({ isDeleted: false }) // Move fixed conditions here to avoid type errors
-    .dynamicInclude(mediaIncludeConfig)
+    .dynamicInclude(mediaIncludeConfig, ["genres"])
     .sort()
     .paginate()
     .fields()
     .execute(); // .execute() returns { data, meta }
 
-  // 3. Return the result directly
+  // 3. Transform "genres"
+  result.data = result.data.map((media: any) => ({
+    ...media,
+    genres: media.genres?.map((g: any) => ({
+      id: g.genre.id,
+      name: g.genre.name,
+    })),
+  }));
+
   return result;
 };
 

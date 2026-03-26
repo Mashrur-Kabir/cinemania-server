@@ -29,6 +29,7 @@ router.post(
 router.patch(
   "/:id/progress",
   checkAuth(Role.USER, Role.ADMIN),
+  checkActiveSubscription,
   // No need for a complex validation schema here, just a simple body check
   MediaController.updateProgress,
 );

@@ -4,6 +4,7 @@ import { WatchedHistoryValidation } from "./watchedHistory.validation";
 import validateRequest from "../../middlewares/validateRequest";
 import checkAuth from "../../middlewares/authMiddleware";
 import { Role } from "../../../generated/prisma/enums";
+import { checkActiveSubscription } from "../../middlewares/subscriptionMiddleware";
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.get(
 router.post(
   "/",
   checkAuth(Role.USER, Role.ADMIN),
+  checkActiveSubscription,
   validateRequest(WatchedHistoryValidation.logMovieSchema),
   WatchedHistoryController.logMovie,
 );
