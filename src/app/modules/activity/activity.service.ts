@@ -44,7 +44,18 @@ const getFollowingActivityFromDB = async (userId: string, limit = 20) => {
   return logs.map(formatActivityLog);
 };
 
+//cron task:
+const cleanupOldLogs = async () => {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  return await prisma.activityLog.deleteMany({
+    where: { createdAt: { lt: thirtyDaysAgo } },
+  });
+};
+
 export const ActivityService = {
   createLogInDB,
   getFollowingActivityFromDB,
+  cleanupOldLogs,
 };

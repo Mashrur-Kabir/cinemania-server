@@ -2,50 +2,86 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Your Cinemania Receipt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Cinemania Access</title>
 </head>
-<body style="margin:0;padding:0;background-color:#f8fafc;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+<body style="margin:0;padding:0;background-color:#0f172a;font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 10px;background-color:#0f172a;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.05);overflow:hidden;">
+        
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#1e293b;border-radius:24px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.3);overflow:hidden;border:1px solid #334155;">
+          
           <tr>
-            <td style="background-color:#4f46e5;padding:40px;text-align:center;">
-              <h1 style="color:#ffffff;margin:0;font-size:28px;letter-spacing:2px;">CINEMANIA</h1>
-              <p style="color:#c7d2fe;margin:8px 0 0 0;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Subscription Confirmed</p>
+            <td style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);padding:50px 40px;text-align:center;">
+              <h1 style="color:#ffffff;margin:0;font-size:32px;font-weight:900;letter-spacing:4px;text-transform:uppercase;">CINEMANIA</h1>
+              <div style="height:2px;width:40px;background:#ffffff;margin:15px auto;opacity:0.3;"></div>
+              <p style="color:#e0e7ff;margin:0;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;">Subscription Confirmed</p>
             </td>
           </tr>
+
           <tr>
-            <td style="padding:40px;">
-              <h2 style="color:#1e293b;margin:0 0 16px 0;">Hi, <%= userName %>!</h2>
-              <p style="color:#64748b;line-height:1.6;margin:0 0 32px 0;">
-                Grab the popcorn! Your <strong><%= planName %></strong> subscription is now active. You have full access to our library until <%= expiryDate %>.
+            <td style="padding:45px 40px;">
+              <h2 style="color:#f8fafc;margin:0 0 16px 0;font-size:24px;font-weight:700;">Action, <%= userName %>!</h2>
+              <p style="color:#94a3b8;line-height:1.7;margin:0 0 35px 0;font-size:16px;">
+                Your cinematic journey has officially begun. We've activated your 
+                <strong style="color:#818cf8;"><%= planName %></strong> access. Your unlimited pass to our entire library is valid until 
+                <span style="color:#f8fafc;font-weight:600;"><%= expiryDate %></span>.
               </p>
               
-              <table width="100%" style="background:#f1f5f9;border-radius:12px;padding:24px;margin-bottom:32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;border-radius:16px;border:1px solid #334155;margin-bottom:40px;">
                 <tr>
-                  <td>
-                    <p style="margin:0;font-size:11px;color:#94a3b8;text-transform:uppercase;">Total Paid</p>
-                    <p style="margin:4px 0 0 0;font-size:24px;font-weight:bold;color:#4f46e5;"><%= amount %> USD</p>
-                  </td>
-                  <td align="right">
-                    <p style="margin:0;font-size:11px;color:#94a3b8;text-transform:uppercase;">Plan Tier</p>
-                    <p style="margin:4px 0 0 0;font-size:18px;font-weight:bold;color:#1e293b;"><%= planName %></p>
+                  <td style="padding:25px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding-bottom:15px;">
+                          <p style="margin:0;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Total Paid</p>
+                          <p style="margin:4px 0 0 0;font-size:28px;font-weight:800;color:#10b981;"><%= amount %> <span style="font-size:16px;font-weight:400;color:#64748b;">USD</span></p>
+                        </td>
+                        <td align="right" style="padding-bottom:15px;vertical-align: top;">
+                          <p style="margin:0;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Access Level</p>
+                          <p style="margin:4px 0 0 0;font-size:18px;font-weight:700;color:#f8fafc;"><%= planName %></p>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
 
-              <p style="text-align:center;">
-                <a href="<%= invoiceUrl %>" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:bold;font-size:14px;">View Official Invoice</a>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <a href="<%= invoiceUrl %>" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:18px 35px;border-radius:12px;font-weight:700;font-size:15px;box-shadow:0 10px 15px -3px rgba(79,70,229,0.3);">
+                      Download Official Invoice
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="text-align:center;margin-top:25px;">
+                <a href="#" style="color:#64748b;font-size:13px;text-decoration:none;">Go to My Library &rarr;</a>
               </p>
             </td>
           </tr>
+
           <tr>
-            <td style="padding:24px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0;">
-              <p style="margin:0;font-size:11px;color:#94a3b8;">&copy; 2026 Cinemania Streaming. All rights reserved.</p>
+            <td style="padding:30px 40px;background:#1a2233;text-align:center;border-top:1px solid #334155;">
+              <p style="margin:0;font-size:12px;color:#64748b;line-height:1.5;">
+                &copy; 2026 Cinemania Streaming Services.<br>
+                This is an automated receipt. No signature required.
+              </p>
             </td>
           </tr>
         </table>
+
+        <table width="600" cellpadding="0" cellspacing="0" style="margin-top:20px;">
+          <tr>
+            <td align="center" style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:1px;">
+              You are receiving this because of a recent transaction on cinemania.com
+            </td>
+          </tr>
+        </table>
+
       </td>
     </tr>
   </table>

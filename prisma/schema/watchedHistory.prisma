@@ -6,6 +6,10 @@ model WatchedHistory {
     notes     String?  @db.Text // Brief thoughts/mood while watching
     isRewatch Boolean  @default(false)
 
+    lastPosition Int     @default(0) // Progress in seconds
+    duration     Int     @default(0) // Total duration in seconds
+    isCompleted  Boolean @default(false) // Marks if user finished the movie
+
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 

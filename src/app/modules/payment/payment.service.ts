@@ -209,9 +209,21 @@ const getSubscriptionSummaryFromDB = async (userId: string) => {
   };
 };
 
+//cron task:
+const syncExpiredSubscriptions = async () => {
+  return await prisma.subscription.updateMany({
+    where: {
+      isActive: true,
+      endDate: { lt: new Date() },
+    },
+    data: { isActive: false },
+  });
+};
+
 export const PaymentService = {
   createCheckoutSessionInDB,
   handleStripeWebhookService,
   getMyBillingHistoryFromDB,
   getSubscriptionSummaryFromDB,
+  syncExpiredSubscriptions,
 };

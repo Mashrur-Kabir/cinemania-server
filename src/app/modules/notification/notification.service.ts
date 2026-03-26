@@ -64,10 +64,24 @@ const getUnreadCountFromDB = async (userId: string) => {
   });
 };
 
+//cron task:
+const cleanupOldReadNotifications = async () => {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  return await prisma.notification.deleteMany({
+    where: {
+      isRead: true,
+      createdAt: { lt: thirtyDaysAgo },
+    },
+  });
+};
+
 export const NotificationService = {
   createNotificationInDB,
   getUserNotificationsFromDB,
   markAsReadInDB,
   markAllAsReadInDB,
   getUnreadCountFromDB,
+  cleanupOldReadNotifications,
 };

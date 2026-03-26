@@ -7,6 +7,9 @@ const watchedHistoryBodySchema = z.object({
     .optional(),
   notes: z.string().max(500).optional(),
   isRewatch: z.boolean().optional(),
+  lastPosition: z.number().min(0).optional(),
+  duration: z.number().min(0).optional(),
+  isCompleted: z.boolean().optional(),
 });
 
 const logMovieSchema = z.object({

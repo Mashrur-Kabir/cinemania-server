@@ -43,6 +43,42 @@ const createMediaIntoDB = async (payload: IMediaPayload) => {
   });
 };
 
+const updateProgressInDB = async (
+  userId: string,
+  mediaId: string,
+  payload: { lastPosition: number; duration: number },
+) => {
+  const { lastPosition, duration } = payload;
+
+  // Logic: Mark as completed if they've watched more than 95%
+  const isCompleted = lastPosition / duration > 0.95;
+
+  return await prisma.watchedHistory.upsert({
+    where: {
+      // Note: You may need a unique constraint in Prisma
+      // or findFirst then update if you allow multiple diary entries
+      id:
+        (
+          await prisma.watchedHistory.findFirst({
+            where: { userId, mediaId, isCompleted: false },
+          })
+        )?.id || "new-uuid",
+    },
+    update: {
+      lastPosition,
+      duration,
+      isCompleted,
+    },
+    create: {
+      userId,
+      mediaId,
+      lastPosition,
+      duration,
+      isCompleted,
+    },
+  });
+};
+
 const getAllMediaFromDB = async (filters: IMediaFilterOptions) => {
   // 1. Initialize QueryBuilder with the model, raw filters, and config constants
   const mediaQuery = new QueryBuilder<
@@ -155,6 +191,7 @@ const getMediaStreamById = async (id: string) => {
 
 export const MediaService = {
   createMediaIntoDB,
+  updateProgressInDB,
   getAllMediaFromDB,
   getSingleMediaBySlug,
   updateMediaInDB,

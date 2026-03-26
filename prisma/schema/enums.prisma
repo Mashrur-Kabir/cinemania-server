@@ -5,6 +5,8 @@ enum Role {
 
 enum Pricing {
     FREE
+    BASIC
+    PRO
     PREMIUM
 }
 

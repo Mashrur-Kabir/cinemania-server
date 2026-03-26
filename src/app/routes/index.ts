@@ -10,6 +10,7 @@ import { WatchedHistoryRoutes } from "../modules/watchedHistory/watchedHistory.r
 import { ActivityRoutes } from "../modules/activity/activity.routes";
 import { NotificationRoutes } from "./../modules/notification/notification.routes";
 import { PaymentRoutes } from "../modules/payment/payment.routes";
+import { DiscoveryRoutes } from "../modules/discovery/discovery.routes";
 
 const router = Router();
 
@@ -45,5 +46,8 @@ router.use("/notification", NotificationRoutes);
 
 //payment
 router.use("/payment", PaymentRoutes);
+
+//discovery
+router.use("/discovery", DiscoveryRoutes);
 
 export const IndexRoutes = router;

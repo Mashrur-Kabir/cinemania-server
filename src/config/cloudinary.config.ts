@@ -27,7 +27,7 @@ export const uploadFileToCloudinary = async (
     .replace(/-+/g, "-");
 
   // FIX 1: Keep the extension in the public_id so the URL ends in .pdf
-  const uniqueName = `${Math.random().toString(36).substring(2, 8)}-${Date.now()}-${cleanedName}.${extension}`;
+  const uniqueName = `${Math.random().toString(36).substring(2, 8)}-${Date.now()}-${cleanedName}`;
   // Folders organized by app name and file type
   const folderPath = `cinemania/${extension === "pdf" ? "invoices" : "media"}`;
 

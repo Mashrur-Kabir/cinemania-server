@@ -16,6 +16,22 @@ const createMedia = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updateProgress = catchAsync(async (req: Request, res: Response) => {
+  const { id: mediaId } = req.params;
+  const result = await MediaService.updateProgressInDB(
+    req.user.id,
+    mediaId as string,
+    req.body,
+  );
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Playback progress saved",
+    data: result,
+  });
+});
+
 const getAllMedia = catchAsync(async (req: Request, res: Response) => {
   const result = await MediaService.getAllMediaFromDB(
     req.query as IMediaFilterOptions,
@@ -84,6 +100,7 @@ const getMediaStream = catchAsync(async (req: Request, res: Response) => {
 
 export const MediaController = {
   createMedia,
+  updateProgress,
   getAllMedia,
   getSingleMedia,
   updateMedia,

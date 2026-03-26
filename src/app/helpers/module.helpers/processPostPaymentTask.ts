@@ -27,7 +27,7 @@ const processPostPaymentTasks = async (result: any, planName: string) => {
   // 2. Cloudinary Upload (Stream from buffer)
   const upload = await uploadFileToCloudinary(
     pdfBuffer,
-    `invoice-${payment.id}`,
+    `invoice-${payment.id}.pdf`,
   );
 
   // 3. Persist the Invoice URL

@@ -27,6 +27,13 @@ router.post(
 );
 
 router.patch(
+  "/:id/progress",
+  checkAuth(Role.USER, Role.ADMIN),
+  // No need for a complex validation schema here, just a simple body check
+  MediaController.updateProgress,
+);
+
+router.patch(
   "/:id",
   checkAuth(Role.ADMIN),
   validateRequest(MediaValidation.updateMediaSchema),
