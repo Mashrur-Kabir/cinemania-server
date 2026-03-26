@@ -11,6 +11,7 @@ import {
   mediaIncludeConfig,
   mediaSearchableFields,
 } from "./media.constant";
+import { AchievementService } from "../achievement/achievement.service";
 
 const createMediaIntoDB = async (payload: IMediaPayload) => {
   const { genreIds, ...mediaData } = payload;
@@ -54,7 +55,7 @@ const updateProgressInDB = async (
   // Logic: Mark as completed if they've watched more than 95%
   const isCompleted = lastPosition / duration > 0.95;
 
-  return await prisma.watchedHistory.upsert({
+  const result = await prisma.watchedHistory.upsert({
     where: {
       // Note: You may need a unique constraint in Prisma
       // or findFirst then update if you allow multiple diary entries
@@ -78,6 +79,16 @@ const updateProgressInDB = async (
       isCompleted,
     },
   });
+
+  // --- Achievement Hook ---
+  if (isCompleted) {
+    // This triggers the engine to see if the user has NOW hit the milestone (e.g., 10 movies)
+    AchievementService.checkAndAwardBadges(userId, "STYLE").catch((err) =>
+      console.error("Style Badge Error:", err),
+    );
+  }
+
+  return result;
 };
 
 const getAllMediaFromDB = async (filters: IMediaFilterOptions) => {

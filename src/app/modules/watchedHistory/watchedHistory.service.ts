@@ -9,6 +9,7 @@ import {
   NotificationType,
 } from "../../../generated/prisma/enums";
 import { NotificationService } from "../notification/notification.service";
+import { AchievementService } from "../achievement/achievement.service";
 
 const logToHistoryInDB = async (
   userId: string,
@@ -20,7 +21,7 @@ const logToHistoryInDB = async (
   const media = await prisma.media.findUnique({ where: { id: mediaId } });
   if (!media) throw new AppError(status.NOT_FOUND, "Media not found");
 
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const historyEntry = await tx.watchedHistory.create({
       data: {
         userId,
@@ -73,6 +74,17 @@ const logToHistoryInDB = async (
 
     return historyEntry;
   });
+
+  // --- Achievement Hook ---
+  // We check for Volume (Total) and Genre milestones
+  AchievementService.checkAndAwardBadges(userId, "VOLUME").catch((err) =>
+    console.error("Volume Badge Error:", err),
+  );
+  AchievementService.checkAndAwardBadges(userId, "GENRE").catch((err) =>
+    console.error("Genre Badge Error:", err),
+  );
+
+  return result;
 };
 
 const getUserDiaryFromDB = async (userId: string) => {

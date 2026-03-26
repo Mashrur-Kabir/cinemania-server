@@ -14,6 +14,13 @@ export interface IUserProfileStats {
     isActive: boolean;
   };
   genres: { name: string; count: number; percentage: number }[];
+  badges: {
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    earnedAt: Date;
+  }[]; // Added for the Trophy Case
   watchActivity: { month: string; count: number }[];
 }
 

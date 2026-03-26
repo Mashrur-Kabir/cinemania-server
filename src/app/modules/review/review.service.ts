@@ -18,6 +18,7 @@ import {
 import { syncMediaStats } from "../../helpers/module.helpers/syncMediaStats";
 import { ActivityService } from "../activity/activity.service";
 import { NotificationService } from "../notification/notification.service";
+import { AchievementService } from "../achievement/achievement.service";
 
 const createReviewInDB = async (userId: string, payload: IReviewPayload) => {
   // 1. Prevent multiple reviews for same media by same user
@@ -32,8 +33,8 @@ const createReviewInDB = async (userId: string, payload: IReviewPayload) => {
     );
   }
 
-  return await prisma.$transaction(async (tx) => {
-    const review = await tx.review.create({
+  const review = await prisma.$transaction(async (tx) => {
+    const createdReview = await tx.review.create({
       data: { ...payload, userId },
     });
 
@@ -44,7 +45,7 @@ const createReviewInDB = async (userId: string, payload: IReviewPayload) => {
       userId,
       ActivityAction.REVIEW_CREATE,
       "Review",
-      review.id,
+      createdReview.id,
       {
         mediaTitle: media?.title,
         rating: payload.rating,
@@ -52,8 +53,16 @@ const createReviewInDB = async (userId: string, payload: IReviewPayload) => {
       tx,
     );
 
-    return review;
+    return createdReview;
   });
+
+  // --- Achievement Hook ---
+  // Trigger 'The Critic' check
+  AchievementService.checkAndAwardBadges(userId, "REVIEWING").catch((err) =>
+    console.error("Review Creation Badge Error:", err),
+  );
+
+  return review;
 };
 
 const updateReviewInDB = async (

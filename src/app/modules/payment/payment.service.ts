@@ -10,6 +10,7 @@ import { envVars } from "../../../config/env";
 import { planPrices } from "./payment.constants";
 import { Prisma } from "../../../generated/prisma/client";
 import { PaymentHelper } from "../../helpers/module.helpers/processPostPaymentTask";
+import { AchievementService } from "../achievement/achievement.service";
 
 const createCheckoutSessionInDB = async (
   userId: string,
@@ -128,6 +129,11 @@ const handleStripeWebhookService = async (event: Stripe.Event) => {
 
         return { user, payment, subscription };
       });
+
+      // --- Achievement Hook ---
+      AchievementService.checkAndAwardBadges(userId, "LOYALTY").catch((err) =>
+        console.error("Loyalty Badge Error:", err),
+      );
 
       // Background Tasks
       PaymentHelper.processPostPaymentTasks(

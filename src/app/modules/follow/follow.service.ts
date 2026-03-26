@@ -7,6 +7,7 @@ import {
   NotificationType,
 } from "../../../generated/prisma/enums";
 import { NotificationService } from "../notification/notification.service";
+import { AchievementService } from "../achievement/achievement.service";
 
 const toggleFollowInDB = async (followerId: string, followingId: string) => {
   if (followerId === followingId) {
@@ -23,7 +24,7 @@ const toggleFollowInDB = async (followerId: string, followingId: string) => {
     where: { followerId_followingId: { followerId, followingId } },
   });
 
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     if (existingFollow) {
       await tx.follow.delete({ where: { id: existingFollow.id } });
 
@@ -69,6 +70,21 @@ const toggleFollowInDB = async (followerId: string, followingId: string) => {
       return { followed: true };
     }
   });
+
+  // --- Achievement Hooks ---
+  if (result.followed) {
+    // 1. Check for 'Socialite' milestone for the one who followed
+    AchievementService.checkAndAwardBadges(followerId, "SOCIAL").catch((err) =>
+      console.error("Follower SOCIAL Badge Error:", err),
+    );
+
+    // 2. Check for 'Rising Star' milestone for the one who gained a follower
+    AchievementService.checkAndAwardBadges(followingId, "SOCIAL").catch((err) =>
+      console.error("Following SOCIAL Badge Error:", err),
+    );
+  }
+
+  return result;
 };
 
 const getFollowersList = async (userId: string) => {

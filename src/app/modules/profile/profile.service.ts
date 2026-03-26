@@ -5,7 +5,8 @@ import { IUserProfileStats, IAdminDashboardStats } from "./profile.interface";
 const getPersonalStatsFromDB = async (
   userId: string,
 ): Promise<IUserProfileStats> => {
-  const [user, sub, history, reviews] = await Promise.all([
+  // 1. Added userBadges to the parallel fetch
+  const [user, sub, history, reviews, userBadges] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       include: { _count: { select: { followers: true, following: true } } },
@@ -19,6 +20,11 @@ const getPersonalStatsFromDB = async (
       include: { media: { include: { genres: { include: { genre: true } } } } },
     }),
     prisma.review.count({ where: { userId } }),
+    prisma.userBadge.findMany({
+      where: { userId },
+      include: { badge: true }, // Join with Badge to get details
+      orderBy: { earnedAt: "desc" }, // Show newest trophies first
+    }),
   ]);
 
   // Calculate total minutes watched (using playback duration)
@@ -45,6 +51,15 @@ const getPersonalStatsFromDB = async (
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
+  // 2. Format the badges for the response
+  const badges = userBadges.map((ub) => ({
+    id: ub.badge.id,
+    name: ub.badge.name,
+    description: ub.badge.description,
+    icon: ub.badge.icon,
+    earnedAt: ub.earnedAt,
+  }));
+
   return {
     overview: {
       totalWatched: history.length,
@@ -59,7 +74,8 @@ const getPersonalStatsFromDB = async (
       isActive: !!sub,
     },
     genres,
-    watchActivity: [], // Logic for chart data would go here
+    badges, // Included in the return object
+    watchActivity: [],
   };
 };
 
