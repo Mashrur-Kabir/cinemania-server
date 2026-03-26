@@ -1,0 +1,22 @@
+model Badge {
+    id          String @id @default(uuid())
+    name        String @unique
+    description String
+    icon        String // Cloudinary URL or SVG name
+    category    String // e.g., VOLUME, GENRE, SOCIAL
+    criteria    Json // e.g., { "type": "WATCH_COUNT", "value": 50 }
+
+    users UserBadge[]
+}
+
+model UserBadge {
+    id       String   @id @default(uuid())
+    userId   String
+    badgeId  String
+    earnedAt DateTime @default(now())
+
+    user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+    badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, badgeId])
+}

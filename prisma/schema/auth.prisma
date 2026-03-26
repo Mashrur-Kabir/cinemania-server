@@ -28,6 +28,7 @@ model User {
   triggeredNotifications Notification[] @relation("NotificationActor")
   followers              Follow[]       @relation("UserFollowing") // People following this user
   following              Follow[]       @relation("UserFollowers") // People this user follows
+  userBadges             UserBadge[]
 
   @@unique([email])
   @@index([status]) // Added: Fast lookup for active/blocked users
