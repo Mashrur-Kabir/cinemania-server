@@ -15,14 +15,16 @@ enum ReviewStatus {
 }
 
 enum SubscriptionType {
-    MONTHLY
-    YEARLY
+    BASIC // e.g., $9.99/mo
+    PRO // e.g., $19.99/mo
+    PREMIUM // e.g., $29.99/mo
 }
 
 enum PaymentStatus {
     PENDING
     PAID
     FAILED
+    CANCELLED
 }
 
 enum UserStatus {

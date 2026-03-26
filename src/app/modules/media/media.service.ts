@@ -135,10 +135,29 @@ const deleteMediaFromDB = async (id: string) => {
   });
 };
 
+const getMediaStreamById = async (id: string) => {
+  const media = await prisma.media.findUnique({
+    where: { id, isDeleted: false },
+    select: {
+      id: true,
+      title: true,
+      streamingUrl: true,
+      pricing: true,
+    },
+  });
+
+  if (!media) throw new AppError(status.NOT_FOUND, "Media not found");
+
+  // Security Note: In a real production app, you might generate a
+  // signed CloudFront/S3 URL here instead of returning a raw DB string.
+  return media;
+};
+
 export const MediaService = {
   createMediaIntoDB,
   getAllMediaFromDB,
   getSingleMediaBySlug,
   updateMediaInDB,
   deleteMediaFromDB,
+  getMediaStreamById,
 };

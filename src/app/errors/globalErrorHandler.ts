@@ -6,7 +6,7 @@ import { AppError } from "./AppError";
 import { ZodError } from "zod";
 import { IErrorResponse, IErrorSources } from "../interfaces/error.interface";
 import { handleZodError } from "./zodError";
-// import { deleteUploadedFilesFromGlobalErrorHandler } from "../utils/deleteUploadedFilesFromGEH";
+import { deleteUploadedFilesFromGlobalErrorHandler } from "../utils/deleteUploadedFilesFromGEH";
 import { handlePrismaError } from "../helpers/error.helpers/handlePrismaErrors";
 
 const globalErrorHandler: ErrorRequestHandler = async (
@@ -19,7 +19,7 @@ const globalErrorHandler: ErrorRequestHandler = async (
    * --- CLEANUP LOGIC IN CLOUDINARY ---
    * If an error occurs, check if a file was uploaded and delete it
    */
-  // await deleteUploadedFilesFromGlobalErrorHandler(req);
+  await deleteUploadedFilesFromGlobalErrorHandler(req);
 
   // Explicitly set type to number to avoid literal type inference
   let statusCode: number = status.INTERNAL_SERVER_ERROR;

@@ -9,7 +9,7 @@ import path from "path";
 import { envVars } from "./config/env";
 import cors from "cors";
 import qs from "qs";
-// import { PaymentController } from "./app/modules/payment/payment.controller";
+import { PaymentController } from "./app/modules/payment/payment.controller";
 
 //express
 const app: Application = express();
@@ -21,12 +21,12 @@ app.set("query parser", (str: string) => qs.parse(str));
 app.set("view engine", "ejs");
 app.set("views", path.resolve(process.cwd(), `src/app/templates`));
 
-// //payment webhook event-handler
-// app.post(
-//   "/webhook",
-//   express.raw({ type: "application/json" }),
-//   PaymentController.handleStripeWebhookEvent,
-// );
+//payment webhook event-handler
+app.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  PaymentController.handleStripeWebhookEvent,
+);
 
 //cors middleware
 app.use(

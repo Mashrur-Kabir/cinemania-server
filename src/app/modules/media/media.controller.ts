@@ -66,10 +66,27 @@ const deleteMedia = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMediaStream = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await MediaService.getMediaStreamById(id as string);
+
+  // LOGIC: If the movie is FREE, we don't strictly need the subscription
+  // (though the middleware already checked it).
+  // You can add extra tier-based logic here if needed.
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Stream link retrieved successfully",
+    data: result,
+  });
+});
+
 export const MediaController = {
   createMedia,
   getAllMedia,
   getSingleMedia,
   updateMedia,
   deleteMedia,
+  getMediaStream,
 };

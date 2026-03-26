@@ -58,9 +58,16 @@ const markAllAsReadInDB = async (userId: string) => {
   });
 };
 
+const getUnreadCountFromDB = async (userId: string) => {
+  return await prisma.notification.count({
+    where: { userId, isRead: false },
+  });
+};
+
 export const NotificationService = {
   createNotificationInDB,
   getUserNotificationsFromDB,
   markAsReadInDB,
   markAllAsReadInDB,
+  getUnreadCountFromDB,
 };

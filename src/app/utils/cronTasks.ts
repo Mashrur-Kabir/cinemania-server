@@ -3,40 +3,59 @@ import { prisma } from "../lib/prisma";
 import { logger } from "./logger";
 
 export const initCronTasks = () => {
-  // Run every night at midnight
+  /**
+   * 1. DAILY MAINTENANCE (Midnight)
+   * Cleanup for Logs and Notifications
+   */
   cron.schedule("0 0 * * *", async () => {
-    logger.warn(
-      "Running daily database maintenance: Cleaning old activity logs...",
-    );
+    logger.warn("Running daily database maintenance: Cleaning old records...");
 
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+      // Cleanup Activity Logs
       const deletedActivity = await prisma.activityLog.deleteMany({
-        where: {
-          createdAt: {
-            lt: thirtyDaysAgo, // Delete everything older than 30 days
-          },
-        },
+        where: { createdAt: { lt: thirtyDaysAgo } },
       });
 
-      logger.success(
-        `Cleanup complete. Removed ${deletedActivity.count} old activity logs.`,
-      );
-
+      // Cleanup Read Notifications
       const deletedNotif = await prisma.notification.deleteMany({
         where: {
           isRead: true,
-          createdAt: { lt: thirtyDaysAgo }, // Delete READ notifications older than 30 days
+          createdAt: { lt: thirtyDaysAgo },
         },
       });
 
       logger.success(
-        `Cleanup complete. Removed ${deletedNotif.count} old notifications.`,
+        `Cleanup: Removed ${deletedActivity.count} logs and ${deletedNotif.count} notifications.`,
       );
     } catch (error) {
-      logger.error("Failed to clean up old activity logs:", error);
+      logger.error("Daily cleanup failed:", error);
+    }
+  });
+
+  /**
+   * 2. HOURLY MAINTENANCE
+   * Automatically deactivate expired subscriptions
+   */
+  cron.schedule("0 * * * *", async () => {
+    try {
+      const result = await prisma.subscription.updateMany({
+        where: {
+          isActive: true,
+          endDate: { lt: new Date() },
+        },
+        data: { isActive: false },
+      });
+
+      if (result.count > 0) {
+        logger.warn(
+          `Subscription Sync: Deactivated ${result.count} expired plans.`,
+        );
+      }
+    } catch (error) {
+      logger.error("Hourly subscription sync failed:", error);
     }
   });
 };

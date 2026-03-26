@@ -8,6 +8,8 @@ import { WatchlistRoutes } from "../modules/watchlist/watchlist.routes";
 import { FollowRoutes } from "../modules/follow/follow.routes";
 import { WatchedHistoryRoutes } from "../modules/watchedHistory/watchedHistory.routes";
 import { ActivityRoutes } from "../modules/activity/activity.routes";
+import { NotificationRoutes } from "./../modules/notification/notification.routes";
+import { PaymentRoutes } from "../modules/payment/payment.routes";
 
 const router = Router();
 
@@ -39,6 +41,9 @@ router.use("/watchedHistory", WatchedHistoryRoutes);
 router.use("/activity", ActivityRoutes);
 
 //notification
-// router.use("/notification");
+router.use("/notification", NotificationRoutes);
+
+//payment
+router.use("/payment", PaymentRoutes);
 
 export const IndexRoutes = router;

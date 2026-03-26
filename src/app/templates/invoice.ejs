@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Your Cinemania Receipt</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.05);overflow:hidden;">
+          <tr>
+            <td style="background-color:#4f46e5;padding:40px;text-align:center;">
+              <h1 style="color:#ffffff;margin:0;font-size:28px;letter-spacing:2px;">CINEMANIA</h1>
+              <p style="color:#c7d2fe;margin:8px 0 0 0;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Subscription Confirmed</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="color:#1e293b;margin:0 0 16px 0;">Hi, <%= userName %>!</h2>
+              <p style="color:#64748b;line-height:1.6;margin:0 0 32px 0;">
+                Grab the popcorn! Your <strong><%= planName %></strong> subscription is now active. You have full access to our library until <%= expiryDate %>.
+              </p>
+              
+              <table width="100%" style="background:#f1f5f9;border-radius:12px;padding:24px;margin-bottom:32px;">
+                <tr>
+                  <td>
+                    <p style="margin:0;font-size:11px;color:#94a3b8;text-transform:uppercase;">Total Paid</p>
+                    <p style="margin:4px 0 0 0;font-size:24px;font-weight:bold;color:#4f46e5;"><%= amount %> USD</p>
+                  </td>
+                  <td align="right">
+                    <p style="margin:0;font-size:11px;color:#94a3b8;text-transform:uppercase;">Plan Tier</p>
+                    <p style="margin:4px 0 0 0;font-size:18px;font-weight:bold;color:#1e293b;"><%= planName %></p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="text-align:center;">
+                <a href="<%= invoiceUrl %>" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:bold;font-size:14px;">View Official Invoice</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0;">
+              <p style="margin:0;font-size:11px;color:#94a3b8;">&copy; 2026 Cinemania Streaming. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

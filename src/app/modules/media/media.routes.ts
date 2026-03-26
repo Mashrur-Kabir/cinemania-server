@@ -4,6 +4,7 @@ import { MediaValidation } from "./media.validation";
 import validateRequest from "../../middlewares/validateRequest";
 import checkAuth from "../../middlewares/authMiddleware";
 import { Role } from "../../../generated/prisma/enums";
+import { checkActiveSubscription } from "../../middlewares/subscriptionMiddleware";
 
 const router = Router();
 
@@ -33,5 +34,16 @@ router.patch(
 );
 
 router.delete("/:id", checkAuth(Role.ADMIN), MediaController.deleteMedia);
+
+/**
+ * --- Subscriber Routes ---
+ * Only active subscribers can access the actual streaming URL
+ */
+router.get(
+  "/:id/play",
+  checkAuth(Role.USER, Role.ADMIN),
+  checkActiveSubscription, // The gatekeeper we just built
+  MediaController.getMediaStream,
+);
 
 export const MediaRoutes = router;
