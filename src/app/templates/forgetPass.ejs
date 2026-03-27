@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Your Password | Cinemania</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #020617; margin: 0; padding: 0; color: #f8fafc; }
+        .container { max-width: 600px; margin: 40px auto; background-color: #0f172a; border-radius: 24px; overflow: hidden; border: 1px solid #1e293b; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .header { background-color: #020617; padding: 40px 20px; text-align: center; border-bottom: 1px solid #1e293b; }
+        .header h1 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 5px; font-weight: 800; color: #e11d48; }
+        .content { padding: 48px; text-align: center; }
+        .greeting { font-size: 24px; font-weight: 700; margin-bottom: 12px; color: #ffffff; }
+        .instruction { font-size: 16px; line-height: 1.6; margin-bottom: 40px; color: #94a3b8; }
+        .otp-display { background-color: #1e1b4b; border-radius: 16px; padding: 32px; margin: 0 auto 32px auto; display: inline-block; min-width: 260px; border: 1px solid #312e81; }
+        .otp-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #818cf8; margin-bottom: 12px; display: block; font-weight: 600; }
+        .otp-code { font-size: 42px; font-family: 'Courier New', Courier, monospace; font-weight: 800; color: #ffffff; letter-spacing: 14px; text-shadow: 0 0 20px rgba(225, 29, 72, 0.3); }
+        .footer { padding: 32px; text-align: center; font-size: 12px; color: #475569; background-color: #020617; border-top: 1px solid #1e293b; }
+        .timer { font-size: 13px; color: #e11d48; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><h1>CINEMANIA SECURITY</h1></div>
+        <div class="content">
+            <p class="greeting">Access Recovery</p>
+            <p class="instruction">We received a request to reset the password for your Cinemania account. Enter the unique recovery code below to proceed.</p>
+            <div class="otp-display">
+                <span class="otp-label">Recovery Code</span>
+                <div class="otp-code"><%= otp %></div>
+            </div>
+            <p class="timer">Expires in 2 minutes</p>
+        </div>
+        <div class="footer">
+            <p><strong>Cinemania Security Operations</strong></p>
+            <p>If you did not initiate this request, please secure your account immediately.</p>
+        </div>
+    </div>
+</body>
+</html>

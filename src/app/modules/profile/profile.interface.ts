@@ -1,6 +1,13 @@
-import { SubscriptionType } from "../../../generated/prisma/enums";
+import { Role, SubscriptionType } from "../../../generated/prisma/enums";
 
 export interface IUserProfileStats {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+    role: Role;
+  };
   overview: {
     totalWatched: number;
     totalMinutes: number;

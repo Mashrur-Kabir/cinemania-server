@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connecting to Google | Cinemania</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #020617; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #f8fafc; }
+        .card { text-align: center; background: #0f172a; padding: 50px; border-radius: 24px; border: 1px solid #1e293b; width: 320px; }
+        .spinner { border: 3px solid #1e293b; border-top: 3px solid #e11d48; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s cubic-bezier(0.5, 0, 0.5, 1) infinite; margin: 0 auto 24px; box-shadow: 0 0 15px rgba(225, 29, 72, 0.2); }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        p { letter-spacing: 0.5px; font-size: 15px; color: #94a3b8; }
+        .brand { color: #e11d48; font-weight: 700; margin-bottom: 8px; display: block; font-size: 12px; letter-spacing: 3px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <span class="brand">CINEMANIA</span>
+        <div class="spinner"></div>
+        <p id="status">Connecting to Google...</p>
+    </div>
+
+    <script>
+        (async () => {
+            try {
+                const response = await fetch("<%= betterAuthUrl %>/api/auth/sign-in/social", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include", 
+                    body: JSON.stringify({
+                        provider: "google",
+                        callbackURL: "<%= callbackURL %>"
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.url) {
+                    // Optimized 150ms delay for cookie persistence
+                    setTimeout(() => {
+                        window.location.href = data.url;
+                    }, 150);
+                } else {
+                    throw new Error("Handshake timeout");
+                }
+            } catch (error) {
+                document.getElementById('status').innerHTML = `
+                    <span style="color: #f43f5e; font-weight: 600;">Authentication Failed</span><br/>
+                    <small style="font-size: 11px; opacity: 0.6;">${error.message}</small>
+                `;
+            }
+        })();
+    </script>
+</body>
+</html>

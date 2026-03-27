@@ -1,7 +1,7 @@
 import app from "./app";
 import { initCronTasks } from "./app/utils/cronTasks";
 import { logger } from "./app/utils/logger";
-import { seedAdmin } from "./app/utils/seed";
+import { seedAdmin } from "./app/utils/seedAdmin";
 import { envVars } from "./config/env";
 import { Server } from "http";
 

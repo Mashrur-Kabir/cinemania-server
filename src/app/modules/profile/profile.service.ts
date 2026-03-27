@@ -9,7 +9,14 @@ const getPersonalStatsFromDB = async (
   const [user, sub, history, reviews, userBadges] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      include: { _count: { select: { followers: true, following: true } } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        role: true,
+        _count: { select: { followers: true, following: true } },
+      },
     }),
     prisma.subscription.findFirst({
       where: { userId, isActive: true },
@@ -60,7 +67,18 @@ const getPersonalStatsFromDB = async (
     earnedAt: ub.earnedAt,
   }));
 
+  if (!user) {
+    throw new Error("User profile not found");
+  }
+
   return {
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      role: user.role,
+    },
     overview: {
       totalWatched: history.length,
       totalMinutes: Math.floor(totalMinutes),

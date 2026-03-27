@@ -11,6 +11,7 @@ import { ActivityRoutes } from "../modules/activity/activity.routes";
 import { NotificationRoutes } from "./../modules/notification/notification.routes";
 import { PaymentRoutes } from "../modules/payment/payment.routes";
 import { DiscoveryRoutes } from "../modules/discovery/discovery.routes";
+import { ProfileRoutes } from "../modules/profile/profile.routes";
 
 const router = Router();
 
@@ -49,5 +50,8 @@ router.use("/payment", PaymentRoutes);
 
 //discovery
 router.use("/discovery", DiscoveryRoutes);
+
+//profile
+router.use("/profile", ProfileRoutes);
 
 export const IndexRoutes = router;
