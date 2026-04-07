@@ -10,11 +10,7 @@ const router = Router();
 /**
  * --- Get Routes ---
  */
-router.get(
-  "/",
-  checkAuth(Role.USER, Role.ADMIN),
-  ReviewController.getAllReviews,
-);
+router.get("/", ReviewController.getAllReviews);
 
 // User Interactions
 router.post(

@@ -8,6 +8,7 @@ model Media {
     cast         String[]
     platform     String
     pricing      Pricing   @default(FREE)
+    posterUrl    String
     streamingUrl String?
     isDeleted    Boolean   @default(false)
     deletedAt    DateTime?

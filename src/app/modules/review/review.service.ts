@@ -234,10 +234,9 @@ const getAllReviewsFromDB = async (
     .search()
     .filter()
     .where(baseConditions)
-    .dynamicInclude(reviewIncludeConfig)
+    .dynamicInclude(reviewIncludeConfig, ["user", "media", "comments", "likes"])
     .sort()
     .paginate()
-    .fields()
     .execute();
 
   return result;

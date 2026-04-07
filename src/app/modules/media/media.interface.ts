@@ -9,6 +9,7 @@ export interface IMediaPayload {
   cast: string[];
   platform: string;
   pricing: Pricing;
+  posterUrl: string;
   streamingUrl?: string;
   genreIds: string[]; // Array of IDs to connect
 }

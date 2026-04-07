@@ -8,7 +8,6 @@ export const mediaSearchableFields = [
   "title",
   "description",
   "director",
-  "cast",
   "platform",
   "genres.genre.name",
 ];
@@ -17,6 +16,8 @@ export const mediaSearchableFields = [
  * Fields used for exact matching or range filtering (e.g., specific year or pricing).
  */
 export const mediaFilterableFields = [
+  "title",
+  "description",
   "releaseYear",
   "platform",
   "pricing",

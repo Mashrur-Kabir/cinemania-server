@@ -21,7 +21,12 @@ const registerUser = catchAsync(async (req: Request, res: Response) => {
     statusCode: status.CREATED,
     success: true,
     message: "Welcome to CineMania! Registration successful.",
-    data: { ...rest },
+    data: {
+      accessToken, // ⬅️ REQUIRED for Frontend Server Action
+      refreshToken, // ⬅️ REQUIRED for Frontend Server Action
+      token, // ⬅️ REQUIRED for Frontend Server Action
+      ...rest,
+    },
   });
 });
 
@@ -37,7 +42,12 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
     statusCode: status.OK,
     success: true,
     message: "Logged in successfully!",
-    data: { ...rest },
+    data: {
+      accessToken, // ⬅️ REQUIRED for Frontend Server Action
+      refreshToken, // ⬅️ REQUIRED for Frontend Server Action
+      token, // ⬅️ REQUIRED for Frontend Server Action
+      ...rest,
+    },
   });
 });
 

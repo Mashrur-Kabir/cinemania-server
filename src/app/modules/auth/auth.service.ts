@@ -13,9 +13,27 @@ import {
 } from "./auth.interface";
 import { envVars } from "../../../config/env";
 import { jwtHelpers } from "../../utils/jwt";
+import { EmailValidator } from "../../utils/emailValidation";
 
 const registerUserInDB = async (payload: IRegisterUserPayload) => {
   const { name, email, password, image } = payload;
+
+  // 🛡️ 1. DISPOSABLE EMAIL CHECK
+  if (EmailValidator.isDisposable(email)) {
+    throw new AppError(
+      status.BAD_REQUEST,
+      "Disposable email addresses are not allowed. Please use a permanent email provider.",
+    );
+  }
+
+  // 🛡️ 2. MX RECORD VERIFICATION (DNS)
+  const isValidDomain = await EmailValidator.hasValidMX(email);
+  if (!isValidDomain) {
+    throw new AppError(
+      status.BAD_REQUEST,
+      "The email domain provided appears to be invalid or cannot receive mail.",
+    );
+  }
 
   // 🔴 EXISTING USER CHECK
   const existingUser = await prisma.user.findUnique({

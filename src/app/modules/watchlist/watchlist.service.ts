@@ -73,6 +73,7 @@ const getMyWatchlistFromDB = async (userId: string) => {
           releaseYear: true,
           averageRating: true,
           pricing: true,
+          posterUrl: true,
         },
       },
     },

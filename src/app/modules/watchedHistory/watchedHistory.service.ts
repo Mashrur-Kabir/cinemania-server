@@ -92,7 +92,13 @@ const getUserDiaryFromDB = async (userId: string) => {
     where: { userId },
     include: {
       media: {
-        select: { title: true, slug: true, releaseYear: true, pricing: true },
+        select: {
+          title: true,
+          slug: true,
+          releaseYear: true,
+          pricing: true,
+          posterUrl: true,
+        },
       },
     },
     orderBy: { watchedAt: "desc" },

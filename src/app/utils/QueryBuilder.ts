@@ -46,7 +46,6 @@ export class QueryBuilder<
   search(): this {
     const { searchTerm } = this.queryParams;
     const { searchableFields } = this.config;
-    // doctorSearchableFields = ['user.name', 'user.email', 'specialties.specialty.title' , 'specialties.specialty.description']
     if (searchTerm && searchableFields && searchableFields.length > 0) {
       const searchConditions: Record<string, unknown>[] = searchableFields.map(
         (field) => {
@@ -159,19 +158,19 @@ export class QueryBuilder<
         if (parts.length === 2) {
           const [relation, nestedField] = parts;
 
-          if (!queryWhere[relation]) {
-            queryWhere[relation] = {};
-            countQueryWhere[relation] = {};
-          }
+          // ✅ FORCE `some` for array relations like genres
+          queryWhere[relation] = {
+            some: {
+              [nestedField]: this.parseFilterValue(value),
+            },
+          };
 
-          const queryRelation = queryWhere[relation] as Record<string, unknown>;
-          const countRelation = countQueryWhere[relation] as Record<
-            string,
-            unknown
-          >;
+          countQueryWhere[relation] = {
+            some: {
+              [nestedField]: this.parseFilterValue(value),
+            },
+          };
 
-          queryRelation[nestedField] = this.parseFilterValue(value);
-          countRelation[nestedField] = this.parseFilterValue(value);
           return;
         } else if (parts.length === 3) {
           const [relation, nestedRelation, nestedField] = parts;
@@ -507,6 +506,9 @@ export class QueryBuilder<
         case "startsWith":
         case "endsWith":
           rangeQuery[operator] = parsedValue;
+          if (typeof parsedValue === "string") {
+            rangeQuery["mode"] = "insensitive";
+          }
           break;
 
         case "in":

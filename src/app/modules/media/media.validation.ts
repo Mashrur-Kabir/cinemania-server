@@ -14,6 +14,7 @@ const mediaBodySchema = z.object({
   cast: z.array(z.string()).min(1, "At least one cast member is required"),
   platform: z.string().min(1, "Platform is required"),
   pricing: z.enum(Pricing), // Using nativeEnum is safer for Prisma enums
+  posterUrl: z.url().optional().nullable(),
   streamingUrl: z.url().optional().nullable(),
   genreIds: z.array(z.string()).min(1, "At least one genre is required"),
 });
