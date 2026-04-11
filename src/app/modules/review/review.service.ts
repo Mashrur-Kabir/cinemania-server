@@ -76,23 +76,28 @@ const updateReviewInDB = async (
 
   if (!review || review.isDeleted)
     throw new AppError(status.NOT_FOUND, "Review not found");
+
   if (review.userId !== userId)
     throw new AppError(status.FORBIDDEN, "You can only edit your own reviews.");
 
   return await prisma.$transaction(async (tx) => {
-    // If it was already approved, we need to hide it and re-moderate
-    const needsRemoderation = review.status === ReviewStatus.APPROVED;
-
+    // 🎯 FIX: Just update the payload. Do not touch the status field.
     const updatedReview = await tx.review.update({
       where: { id: reviewId },
       data: {
         ...payload,
-        status: needsRemoderation ? ReviewStatus.PENDING : review.status,
       },
     });
 
-    // If it was approved, it's now 'Pending', so we MUST remove its impact from the movie stats
-    if (needsRemoderation) {
+    /**
+     * 📊 SYNC STATS:
+     * If the review is APPROVED and the rating was changed in the payload,
+     * we must re-calculate the movie's average rating.
+     */
+    if (
+      review.status === ReviewStatus.APPROVED &&
+      payload.rating !== undefined
+    ) {
       await syncMediaStats(review.mediaId, tx);
     }
 
@@ -206,6 +211,7 @@ const toggleLikeInDB = async (userId: string, reviewId: string) => {
 const getAllReviewsFromDB = async (
   filters: IReviewFilterOptions,
   userRole?: string,
+  currentUserId?: string, // 🎯 Added this parameter
 ) => {
   // 1. Define base conditions
   const baseConditions: Prisma.ReviewWhereInput = {
@@ -213,12 +219,17 @@ const getAllReviewsFromDB = async (
   };
 
   /**
-   * 2. Role-based Visibility Logic
-   * If the user is NOT an Admin, they can ONLY see Approved reviews.
-   * Admins can see PENDING/REJECTED for moderation purposes.
+   * 🎯 UPDATED LOGIC:
+   * 1. ADMINS: See everything (isDeleted: false).
+   * 2. OTHERS: See (APPROVED) OR (OWNED BY ME).
    */
   if (userRole !== Role.ADMIN) {
-    baseConditions.status = ReviewStatus.APPROVED;
+    delete filters.status;
+    baseConditions.OR = [
+      { status: ReviewStatus.APPROVED },
+      // If we have a currentUserId, allow them to see their own PENDING/REJECTED reviews
+      ...(currentUserId ? [{ userId: currentUserId }] : []),
+    ];
   }
 
   const reviewQuery = new QueryBuilder<
@@ -233,7 +244,7 @@ const getAllReviewsFromDB = async (
   const result = await reviewQuery
     .search()
     .filter()
-    .where(baseConditions)
+    .where(baseConditions) // This now includes the OR logic
     .dynamicInclude(reviewIncludeConfig, ["user", "media", "comments", "likes"])
     .sort()
     .paginate()

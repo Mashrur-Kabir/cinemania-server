@@ -10,6 +10,13 @@ import {
 } from "../../../generated/prisma/enums";
 import { NotificationService } from "../notification/notification.service";
 import { AchievementService } from "../achievement/achievement.service";
+import { Prisma, WatchedHistory } from "../../../generated/prisma/client";
+import { QueryBuilder } from "../../utils/QueryBuilder";
+import {
+  diaryFilterableFields,
+  diaryIncludeConfig,
+  diarySearchableFields,
+} from "./watchedHistory.constants";
 
 const logToHistoryInDB = async (
   userId: string,
@@ -87,22 +94,29 @@ const logToHistoryInDB = async (
   return result;
 };
 
-const getUserDiaryFromDB = async (userId: string) => {
-  return await prisma.watchedHistory.findMany({
-    where: { userId },
-    include: {
-      media: {
-        select: {
-          title: true,
-          slug: true,
-          releaseYear: true,
-          pricing: true,
-          posterUrl: true,
-        },
-      },
-    },
-    orderBy: { watchedAt: "desc" },
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getUserDiaryFromDB = async (userId: string, filters: any) => {
+  // 1. Initialize the QueryBuilder
+  const diaryQuery = new QueryBuilder<
+    WatchedHistory,
+    Prisma.WatchedHistoryWhereInput,
+    Prisma.WatchedHistoryInclude
+  >(prisma.watchedHistory, filters, {
+    searchableFields: diarySearchableFields,
+    filterableFields: diaryFilterableFields,
   });
+
+  // 2. Chain methods and execute
+  const result = await diaryQuery
+    .search()
+    .filter()
+    .where({ userId }) // 🔒 Strict ownership check
+    .dynamicInclude(diaryIncludeConfig, ["media"])
+    .sort()
+    .paginate()
+    .execute();
+
+  return result;
 };
 
 const updateHistoryInDB = async (

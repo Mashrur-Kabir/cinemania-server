@@ -51,7 +51,13 @@ const getAllReviews = catchAsync(async (req: Request, res: Response) => {
 
   // Use optional chaining in case guests (unauthenticated) can also view reviews
   const userRole = req.user?.role;
-  const result = await ReviewService.getAllReviewsFromDB(filters, userRole);
+  const currentUserId = req.user?.id; // Assumes your auth middleware attaches 'id' to req.user
+
+  const result = await ReviewService.getAllReviewsFromDB(
+    filters,
+    userRole,
+    currentUserId,
+  );
 
   sendResponse(res, {
     statusCode: status.OK,

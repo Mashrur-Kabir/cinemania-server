@@ -4,6 +4,22 @@ import { NotificationType } from "../../../generated/prisma/enums";
 import { NotificationService } from "../notification/notification.service";
 import { IBadgeCriteria } from "./achievement.interface";
 
+const getAllBadgesWithUserStatus = async (userId: string) => {
+  const [allBadges, userBadges] = await Promise.all([
+    prisma.badge.findMany({ orderBy: { category: "asc" } }),
+    prisma.userBadge.findMany({ where: { userId } }),
+  ]);
+
+  const earnedBadgeIds = new Set(userBadges.map((ub) => ub.badgeId));
+
+  return allBadges.map((badge) => ({
+    ...badge,
+    isEarned: earnedBadgeIds.has(badge.id),
+    earnedAt:
+      userBadges.find((ub) => ub.badgeId === badge.id)?.earnedAt || null,
+  }));
+};
+
 const checkAndAwardBadges = async (
   userId: string,
   category: string,
@@ -134,4 +150,7 @@ const evaluateCriteria = async (
   }
 };
 
-export const AchievementService = { checkAndAwardBadges };
+export const AchievementService = {
+  checkAndAwardBadges,
+  getAllBadgesWithUserStatus,
+};

@@ -18,12 +18,17 @@ const logMovie = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getMyDiary = catchAsync(async (req: Request, res: Response) => {
-  const result = await WatchedHistoryService.getUserDiaryFromDB(req.user.id);
+  const filters = req.query;
+  const result = await WatchedHistoryService.getUserDiaryFromDB(
+    req.user.id,
+    filters,
+  );
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
     message: "Diary retrieved successfully",
-    data: result,
+    meta: result.meta,
+    data: result.data,
   });
 });
 
