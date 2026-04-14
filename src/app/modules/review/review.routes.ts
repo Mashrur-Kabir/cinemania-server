@@ -4,17 +4,14 @@ import { ReviewValidation } from "./review.validation";
 import validateRequest from "../../middlewares/validateRequest";
 import checkAuth from "../../middlewares/authMiddleware";
 import { Role } from "../../../generated/prisma/enums";
+import { checkAuthOptional } from "../../middlewares/checkAuthOptional";
 
 const router = Router();
 
 /**
  * --- Get Routes ---
  */
-router.get(
-  "/",
-  checkAuth(Role.USER, Role.ADMIN),
-  ReviewController.getAllReviews,
-);
+router.get("/", checkAuthOptional(), ReviewController.getAllReviews);
 
 // User Interactions
 router.post(

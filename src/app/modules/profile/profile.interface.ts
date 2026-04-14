@@ -1,4 +1,8 @@
-import { Role, SubscriptionType } from "../../../generated/prisma/enums";
+import {
+  Role,
+  SubscriptionType,
+  UserStatus,
+} from "../../../generated/prisma/enums";
 
 export interface IUserProfileStats {
   user: {
@@ -7,6 +11,7 @@ export interface IUserProfileStats {
     email: string;
     image: string | null;
     role: Role;
+    status: UserStatus;
   };
   overview: {
     totalWatched: number;

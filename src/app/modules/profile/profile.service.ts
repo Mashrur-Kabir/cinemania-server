@@ -15,6 +15,7 @@ const getPersonalStatsFromDB = async (
         email: true,
         image: true,
         role: true,
+        status: true,
         _count: { select: { followers: true, following: true } },
       },
     }),
@@ -78,6 +79,7 @@ const getPersonalStatsFromDB = async (
       email: user.email,
       image: user.image,
       role: user.role,
+      status: user.status,
     },
     overview: {
       totalWatched: history.length,

@@ -31,24 +31,27 @@ const markAsRead = catchAsync(async (req: Request, res: Response) => {
 
   await NotificationService.markAsReadInDB(userId, id as string);
 
+  // 🎯 Refinement: Fetch new count immediately
+  const unreadCount = await NotificationService.getUnreadCountFromDB(userId);
+
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
     message: "Notification marked as read",
-    data: null,
+    data: { unreadCount }, // Return the new count
   });
 });
 
 const markAllAsRead = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.id;
 
-  await NotificationService.markAllAsReadInDB(userId);
+  const unreadCount = await NotificationService.markAllAsReadInDB(userId);
 
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
     message: "All notifications marked as read",
-    data: null,
+    data: { unreadCount },
   });
 });
 

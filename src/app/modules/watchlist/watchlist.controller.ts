@@ -20,13 +20,18 @@ const toggleWatchlist = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getMyWatchlist = catchAsync(async (req: Request, res: Response) => {
-  const result = await WatchlistService.getMyWatchlistFromDB(req.user.id);
+  const filters = req.query; // 🎯 Capture page/limit from URL
+  const result = await WatchlistService.getMyWatchlistFromDB(
+    req.user.id,
+    filters,
+  );
 
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
     message: "Watchlist retrieved successfully",
-    data: result,
+    meta: result.meta, // 🚀 Now returning metadata
+    data: result.data,
   });
 });
 

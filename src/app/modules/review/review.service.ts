@@ -225,11 +225,16 @@ const getAllReviewsFromDB = async (
    */
   if (userRole !== Role.ADMIN) {
     delete filters.status;
-    baseConditions.OR = [
-      { status: ReviewStatus.APPROVED },
-      // If we have a currentUserId, allow them to see their own PENDING/REJECTED reviews
-      ...(currentUserId ? [{ userId: currentUserId }] : []),
-    ];
+
+    // ✅ If explicitly requesting a user's reviews → show ALL of them
+    if (filters.userId) {
+      baseConditions.userId = filters.userId;
+    } else {
+      baseConditions.OR = [
+        { status: ReviewStatus.APPROVED },
+        ...(currentUserId ? [{ userId: currentUserId }] : []),
+      ];
+    }
   }
 
   const reviewQuery = new QueryBuilder<

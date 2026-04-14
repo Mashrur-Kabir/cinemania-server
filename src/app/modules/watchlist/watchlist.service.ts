@@ -3,6 +3,13 @@ import { AppError } from "../../errors/AppError";
 import status from "http-status";
 import { ActivityService } from "../activity/activity.service";
 import { ActivityAction } from "../../../generated/prisma/enums";
+import { QueryBuilder } from "../../utils/QueryBuilder";
+import { Prisma, Watchlist } from "../../../generated/prisma/client";
+import {
+  watchlistFilterableFields,
+  watchlistIncludeConfig,
+  watchlistSearchableFields,
+} from "./watchlist.constant";
 
 const toggleWatchlistInDB = async (userId: string, mediaId: string) => {
   // 1. Check if media exists (Need title for metadata)
@@ -61,24 +68,27 @@ const toggleWatchlistInDB = async (userId: string, mediaId: string) => {
   });
 };
 
-const getMyWatchlistFromDB = async (userId: string) => {
-  return await prisma.watchlist.findMany({
-    where: { userId },
-    include: {
-      media: {
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          releaseYear: true,
-          averageRating: true,
-          pricing: true,
-          posterUrl: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getMyWatchlistFromDB = async (userId: string, filters: any) => {
+  const watchlistQuery = new QueryBuilder<
+    Watchlist,
+    Prisma.WatchlistWhereInput,
+    Prisma.WatchlistInclude
+  >(prisma.watchlist, filters, {
+    searchableFields: watchlistSearchableFields,
+    filterableFields: watchlistFilterableFields,
   });
+
+  const result = await watchlistQuery
+    .search()
+    .filter()
+    .where({ userId }) // 🔒 Enforce ownership
+    .dynamicInclude(watchlistIncludeConfig, ["media"])
+    .sort() // Defaults to createdAt desc
+    .paginate()
+    .execute();
+
+  return result;
 };
 
 /**
