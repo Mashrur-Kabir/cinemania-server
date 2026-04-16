@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "../../lib/prisma";
 import { IReviewFilterOptions, IReviewPayload } from "./review.interface";
 import { AppError } from "../../errors/AppError";
@@ -131,7 +132,7 @@ const updateReviewStatus = async (
         userId: review.userId,
         type,
         message: review.media.title, // We store the title so the formatter can use it
-        link: `/reviews/${reviewId}`,
+        link: `/dashboard/my-reviews/${reviewId}`,
       },
       tx,
     );
@@ -197,7 +198,7 @@ const toggleLikeInDB = async (userId: string, reviewId: string) => {
             actorId: userId, // The person who liked it
             type: NotificationType.LIKE_REVIEW,
             message: "liked your review.",
-            link: `/reviews/${reviewId}`,
+            link: `/dashboard/my-reviews/${reviewId}`,
           },
           tx,
         );
@@ -256,6 +257,46 @@ const getAllReviewsFromDB = async (
     .execute();
 
   return result;
+};
+
+// Add this to your ReviewService
+const getSingleReviewFromDB = async (id: string) => {
+  const result = await prisma.review.findUnique({
+    where: { id, isDeleted: false },
+    include: {
+      user: { select: { id: true, name: true, image: true, role: true } },
+      media: true,
+      likes: true,
+      comments: {
+        where: { isDeleted: false },
+        include: {
+          user: { select: { id: true, name: true, image: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+
+  if (!result) throw new AppError(status.NOT_FOUND, "Review not found");
+
+  // 🎯 Tree Logic: Convert flat comments array into a nested structure
+  const commentMap: Record<string, any> = {};
+  const commentTree: any[] = [];
+
+  result.comments.forEach((comment) => {
+    commentMap[comment.id] = { ...comment, replies: [] };
+  });
+
+  result.comments.forEach((comment) => {
+    if (comment.parentId) {
+      commentMap[comment.parentId]?.replies.push(commentMap[comment.id]);
+    } else {
+      commentTree.push(commentMap[comment.id]);
+    }
+  });
+
+  // Replace flat comments with the structured tree
+  return { ...result, comments: commentTree };
 };
 
 const reportReviewInDB = async (
@@ -362,6 +403,7 @@ export const ReviewService = {
   updateReviewStatus,
   toggleLikeInDB,
   getAllReviewsFromDB,
+  getSingleReviewFromDB,
   syncMediaStats,
   reportReviewInDB,
   getReportedReviewsFromDB,

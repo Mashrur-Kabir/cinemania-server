@@ -12,6 +12,7 @@ export interface IUserProfileStats {
     image: string | null;
     role: Role;
     status: UserStatus;
+    isFollowing: boolean;
   };
   overview: {
     totalWatched: number;

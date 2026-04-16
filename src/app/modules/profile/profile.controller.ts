@@ -14,6 +14,19 @@ const getMyStats = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getUserProfile = catchAsync(async (req: Request, res: Response) => {
+  const result = await ProfileService.getUserStatsFromDB(
+    req.params.id as string,
+    req.user?.id, // Current viewer's ID
+  );
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Public profile insights fetched",
+    data: result,
+  });
+});
+
 const getAdminDashboard = catchAsync(async (req: Request, res: Response) => {
   const result = await ProfileService.getAdminStatsFromDB();
   sendResponse(res, {
@@ -24,4 +37,8 @@ const getAdminDashboard = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-export const ProfileController = { getMyStats, getAdminDashboard };
+export const ProfileController = {
+  getUserProfile,
+  getMyStats,
+  getAdminDashboard,
+};

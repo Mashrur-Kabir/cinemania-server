@@ -1,17 +1,64 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Media, Prisma } from "../../../generated/prisma/client";
 import { Pricing } from "../../../generated/prisma/enums";
 import { getAllowedTiers } from "../../helpers/module.helpers/getAllowedTiers";
 import { prisma } from "../../lib/prisma";
+import { QueryBuilder } from "../../utils/QueryBuilder";
+import {
+  mediaFilterableFields,
+  mediaIncludeConfig,
+  mediaSearchableFields,
+} from "../media/media.constant";
 import { IDiscoveryResponse } from "./discovery.interface";
 
-const getHomeDiscoveryFromDB = async (
+const getDiscoveryFeedFromDB = async (
   userId: string,
-): Promise<IDiscoveryResponse> => {
+  query: Record<string, any>,
+): Promise<Partial<IDiscoveryResponse> | any> => {
+  // 🎯 THE FIX: Map 'search' to 'searchTerm' for QueryBuilder compatibility
+  if (query.search) {
+    query.searchTerm = query.search;
+  }
+
+  // 1. Handle Search/Filter Mode
+  // Now we check for searchTerm (which we just mapped)
+  if (query.searchTerm || query.genres || query.platform || query.releaseYear) {
+    const mediaQuery = new QueryBuilder<
+      Media,
+      Prisma.MediaWhereInput,
+      Prisma.MediaInclude
+    >(prisma.media, query, {
+      searchableFields: mediaSearchableFields,
+      filterableFields: mediaFilterableFields,
+    });
+
+    const result = await mediaQuery
+      .search() // 🚀 Now this will find query.searchTerm and work!
+      .filter()
+      .where({ isDeleted: false })
+      .dynamicInclude(mediaIncludeConfig, ["genres"])
+      .sort()
+      .paginate()
+      .execute();
+
+    // ... transformation logic stays the same
+    result.data = result.data.map((media: any) => ({
+      ...media,
+      genres: media.genres?.map((g: any) => ({
+        id: g.genre.id,
+        name: g.genre.name,
+      })),
+    }));
+
+    return { searchResults: result };
+  }
+
+  // 2. Default Feed Mode (What you already wrote)
   const userSub = await prisma.subscription.findFirst({
     where: { userId, isActive: true, endDate: { gte: new Date() } },
   });
   const allowedTiers = getAllowedTiers(userSub?.type);
 
-  // Parallel fetch including Continue Watching
   const [trending, recommendations, continueWatching, socialWatchParty] =
     await Promise.all([
       getTrending(allowedTiers),
@@ -125,4 +172,4 @@ const getSocialWatchParty = async (userId: string) => {
   });
 };
 
-export const DiscoveryService = { getHomeDiscoveryFromDB };
+export const DiscoveryService = { getDiscoveryFeedFromDB };

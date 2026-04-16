@@ -11,6 +11,7 @@ const router = Router();
 /**
  * --- Get Routes ---
  */
+router.get("/:id", checkAuthOptional(), ReviewController.getSingleReview);
 router.get("/", checkAuthOptional(), ReviewController.getAllReviews);
 
 // User Interactions

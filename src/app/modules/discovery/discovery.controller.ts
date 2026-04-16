@@ -6,12 +6,16 @@ import { DiscoveryService } from "./discovery.service";
 
 const getDiscoveryFeed = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.id;
-  const result = await DiscoveryService.getHomeDiscoveryFromDB(userId);
+  const query = req.query;
+
+  const result = await DiscoveryService.getDiscoveryFeedFromDB(userId, query);
 
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
-    message: "Discovery feed generated successfully",
+    message: query.search
+      ? "Search results fetched"
+      : "Discovery feed generated",
     data: result,
   });
 });

@@ -68,6 +68,18 @@ const getAllReviews = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getSingleReview = catchAsync(async (req: Request, res: Response) => {
+  const result = await ReviewService.getSingleReviewFromDB(
+    req.params.id as string,
+  );
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Review details retrieved",
+    data: result,
+  });
+});
+
 const changeStatus = catchAsync(async (req: Request, res: Response) => {
   const result = await ReviewService.updateReviewStatus(
     req.params.id as string,
@@ -128,6 +140,7 @@ export const ReviewController = {
   toggleLike,
   changeStatus,
   getAllReviews,
+  getSingleReview,
   reportReview,
   getReports,
   deleteReview,

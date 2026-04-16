@@ -71,7 +71,7 @@ const createCommentInDB = async (userId: string, payload: ICommentPayload) => {
             actorId: userId,
             type: NotificationType.COMMENT_REPLY,
             message: "replied to your comment.",
-            link: `/reviews/${payload.reviewId}`,
+            link: `/dashboard/my-reviews/${payload.reviewId}`,
           },
           tx,
         );
@@ -89,7 +89,7 @@ const createCommentInDB = async (userId: string, payload: ICommentPayload) => {
           actorId: userId,
           type: NotificationType.COMMENT_ADD,
           message: review.media.title,
-          link: `/reviews/${payload.reviewId}`,
+          link: `/dashboard/my-reviews/${payload.reviewId}`,
         },
         tx,
       );

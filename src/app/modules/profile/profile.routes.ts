@@ -19,4 +19,11 @@ router.get(
   ProfileController.getAdminDashboard,
 );
 
+// User profile (This must come last so it doesn't intercept "/me" or "/admin")
+router.get(
+  "/:id",
+  checkAuth(Role.USER, Role.ADMIN),
+  ProfileController.getUserProfile,
+);
+
 export const ProfileRoutes = router;

@@ -2,53 +2,69 @@ import { prisma } from "../../lib/prisma";
 import { PaymentStatus, ReviewStatus } from "../../../generated/prisma/enums";
 import { IUserProfileStats, IAdminDashboardStats } from "./profile.interface";
 
-const getPersonalStatsFromDB = async (
-  userId: string,
+// 🎯 Reusable Logic for any User ID
+const getUserStatsFromDB = async (
+  targetUserId: string,
+  currentUserId?: string, // Optional: used to check follow status
 ): Promise<IUserProfileStats> => {
-  // 1. Added userBadges to the parallel fetch
-  const [user, sub, history, reviews, userBadges] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        role: true,
-        status: true,
-        _count: { select: { followers: true, following: true } },
-      },
-    }),
-    prisma.subscription.findFirst({
-      where: { userId, isActive: true },
-      orderBy: { endDate: "desc" },
-    }),
-    prisma.watchedHistory.findMany({
-      where: { userId },
-      include: { media: { include: { genres: { include: { genre: true } } } } },
-    }),
-    prisma.review.count({ where: { userId } }),
-    prisma.userBadge.findMany({
-      where: { userId },
-      include: { badge: true }, // Join with Badge to get details
-      orderBy: { earnedAt: "desc" }, // Show newest trophies first
-    }),
-  ]);
+  const [user, sub, history, reviews, userBadges, isFollowing] =
+    await Promise.all([
+      prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          role: true,
+          status: true,
+          _count: { select: { followers: true, following: true } },
+        },
+      }),
+      prisma.subscription.findFirst({
+        where: { userId: targetUserId, isActive: true },
+      }),
+      prisma.watchedHistory.findMany({
+        where: { userId: targetUserId },
+        include: {
+          media: { include: { genres: { include: { genre: true } } } },
+        },
+      }),
+      prisma.review.count({
+        where: { userId: targetUserId, status: "APPROVED" },
+      }),
+      prisma.userBadge.findMany({
+        where: { userId: targetUserId },
+        include: { badge: true },
+        orderBy: { earnedAt: "desc" },
+      }),
+      // 🎯 ADDED: Check if current viewer follows this user
+      currentUserId
+        ? prisma.follow.findUnique({
+            where: {
+              followerId_followingId: {
+                followerId: currentUserId,
+                followingId: targetUserId,
+              },
+            },
+          })
+        : null,
+    ]);
 
-  // Calculate total minutes watched (using playback duration)
+  if (!user) throw new Error("User not found");
+
+  // ... (Your existing totalMinutes and genreMap logic exactly as it was) ...
   const totalMinutes = history.reduce(
     (acc, curr) => acc + curr.duration / 60,
     0,
   );
 
-  // Genre breakdown logic
   const genreMap: Record<string, number> = {};
   history.forEach((h) =>
     h.media.genres.forEach((g) => {
       genreMap[g.genre.name] = (genreMap[g.genre.name] || 0) + 1;
     }),
   );
-
   const totalGenreCount = Object.values(genreMap).reduce((a, b) => a + b, 0);
   const genres = Object.entries(genreMap)
     .map(([name, count]) => ({
@@ -59,34 +75,14 @@ const getPersonalStatsFromDB = async (
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
-  // 2. Format the badges for the response
-  const badges = userBadges.map((ub) => ({
-    id: ub.badge.id,
-    name: ub.badge.name,
-    description: ub.badge.description,
-    icon: ub.badge.icon,
-    earnedAt: ub.earnedAt,
-  }));
-
-  if (!user) {
-    throw new Error("User profile not found");
-  }
-
   return {
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      image: user.image,
-      role: user.role,
-      status: user.status,
-    },
+    user: { ...user, isFollowing: !!isFollowing }, // 🎯 Added follow status
     overview: {
       totalWatched: history.length,
       totalMinutes: Math.floor(totalMinutes),
       reviewCount: reviews,
-      followers: user?._count.followers || 0,
-      following: user?._count.following || 0,
+      followers: user._count.followers,
+      following: user._count.following,
     },
     subscription: {
       plan: sub?.type || "NONE",
@@ -94,9 +90,14 @@ const getPersonalStatsFromDB = async (
       isActive: !!sub,
     },
     genres,
-    badges, // Included in the return object
+    badges: userBadges.map((ub) => ({ ...ub.badge, earnedAt: ub.earnedAt })),
     watchActivity: [],
   };
+};
+
+// 🎯 Keep existing getPersonalStats as a wrapper
+const getPersonalStatsFromDB = async (userId: string) => {
+  return getUserStatsFromDB(userId);
 };
 
 const getAdminStatsFromDB = async (): Promise<IAdminDashboardStats> => {
@@ -144,6 +145,7 @@ const getAdminStatsFromDB = async (): Promise<IAdminDashboardStats> => {
 };
 
 export const ProfileService = {
+  getUserStatsFromDB,
   getPersonalStatsFromDB,
   getAdminStatsFromDB,
 };
