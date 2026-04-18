@@ -209,33 +209,36 @@ const toggleLikeInDB = async (userId: string, reviewId: string) => {
   });
 };
 
-const getAllReviewsFromDB = async (
+const getAllMyReviewsFromDB = async (
   filters: IReviewFilterOptions,
   userRole?: string,
-  currentUserId?: string, // 🎯 Added this parameter
+  currentUserId?: string,
 ) => {
-  // 1. Define base conditions
+  // 🔒 If no authenticated user, return empty result immediately
+  if (!currentUserId) {
+    return {
+      data: [],
+      meta: { page: 1, limit: 10, total: 0, totalPages: 0 },
+    };
+  }
+
   const baseConditions: Prisma.ReviewWhereInput = {
     isDeleted: false,
   };
 
-  /**
-   * 🎯 UPDATED LOGIC:
-   * 1. ADMINS: See everything (isDeleted: false).
-   * 2. OTHERS: See (APPROVED) OR (OWNED BY ME).
-   */
   if (userRole !== Role.ADMIN) {
-    delete filters.status;
+    // 🛡️ Force user isolation — only their own reviews
+    baseConditions.userId = currentUserId;
 
-    // ✅ If explicitly requesting a user's reviews → show ALL of them
-    if (filters.userId) {
-      baseConditions.userId = filters.userId;
-    } else {
-      baseConditions.OR = [
-        { status: ReviewStatus.APPROVED },
-        ...(currentUserId ? [{ userId: currentUserId }] : []),
-      ];
-    }
+    // ✅ Your intended behaviour: PENDING + APPROVED only (not REJECTED)
+    baseConditions.status = {
+      in: [ReviewStatus.APPROVED, ReviewStatus.PENDING],
+    };
+
+    delete filters.status;
+    delete filters.userId;
+  } else if (filters.userId) {
+    baseConditions.userId = filters.userId;
   }
 
   const reviewQuery = new QueryBuilder<
@@ -250,13 +253,43 @@ const getAllReviewsFromDB = async (
   const result = await reviewQuery
     .search()
     .filter()
-    .where(baseConditions) // This now includes the OR logic
+    .where(baseConditions)
     .dynamicInclude(reviewIncludeConfig, ["user", "media", "comments", "likes"])
     .sort()
     .paginate()
     .execute();
 
   return result;
+};
+
+const getApprovedReviewsFromDB = async (
+  userId: string,
+  filters: IReviewFilterOptions,
+) => {
+  // 🎯 Hardcoded safety constraints for public access
+  const baseConditions: Prisma.ReviewWhereInput = {
+    userId,
+    status: ReviewStatus.APPROVED,
+    isDeleted: false,
+  };
+
+  const reviewQuery = new QueryBuilder<
+    Review,
+    Prisma.ReviewWhereInput,
+    Prisma.ReviewInclude
+  >(prisma.review, filters, {
+    searchableFields: reviewSearchableFields,
+    filterableFields: reviewFilterableFields,
+  });
+
+  return await reviewQuery
+    .search()
+    .filter()
+    .where(baseConditions)
+    .dynamicInclude(reviewIncludeConfig, ["user", "media"])
+    .sort()
+    .paginate()
+    .execute();
 };
 
 // Add this to your ReviewService
@@ -297,6 +330,33 @@ const getSingleReviewFromDB = async (id: string) => {
 
   // Replace flat comments with the structured tree
   return { ...result, comments: commentTree };
+};
+
+const getAllApprovedPublicReviewsFromDB = async (
+  filters: IReviewFilterOptions,
+) => {
+  const baseConditions: Prisma.ReviewWhereInput = {
+    status: ReviewStatus.APPROVED,
+    isDeleted: false,
+  };
+
+  const reviewQuery = new QueryBuilder<
+    Review,
+    Prisma.ReviewWhereInput,
+    Prisma.ReviewInclude
+  >(prisma.review, filters, {
+    searchableFields: reviewSearchableFields,
+    filterableFields: reviewFilterableFields,
+  });
+
+  return await reviewQuery
+    .search()
+    .filter()
+    .where(baseConditions)
+    .dynamicInclude(reviewIncludeConfig, ["user", "media"])
+    .sort()
+    .paginate()
+    .execute();
 };
 
 const reportReviewInDB = async (
@@ -402,7 +462,9 @@ export const ReviewService = {
   updateReviewInDB,
   updateReviewStatus,
   toggleLikeInDB,
-  getAllReviewsFromDB,
+  getAllMyReviewsFromDB,
+  getApprovedReviewsFromDB,
+  getAllApprovedPublicReviewsFromDB,
   getSingleReviewFromDB,
   syncMediaStats,
   reportReviewInDB,

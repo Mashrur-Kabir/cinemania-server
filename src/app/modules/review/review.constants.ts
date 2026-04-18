@@ -47,7 +47,15 @@ export const reviewIncludeConfig: Partial<
       id: true,
       title: true,
       slug: true,
+      genres: {
+        include: {
+          genre: {
+            select: { name: true },
+          },
+        },
+      },
       averageRating: true,
+      posterUrl: true,
     },
   },
   comments: {

@@ -8,13 +8,29 @@ import { checkAuthOptional } from "../../middlewares/checkAuthOptional";
 
 const router = Router();
 
-/**
- * --- Get Routes ---
- */
-router.get("/:id", checkAuthOptional(), ReviewController.getSingleReview);
-router.get("/", checkAuthOptional(), ReviewController.getAllReviews);
+// ✅ Static/specific routes FIRST — before any /:id wildcards
+router.get(
+  "/reports/queue",
+  checkAuth(Role.ADMIN),
+  ReviewController.getReports,
+);
 
-// User Interactions
+router.get("/user/:userId", ReviewController.getApprovedReviews);
+
+// 🔥 PUBLIC FEED (homepage, discovery, etc.)
+router.get("/public", ReviewController.getAllApprovedPublicReviews);
+
+// ✅ Require real auth here — no guest access to "my reviews"
+router.get(
+  "/",
+  checkAuth(Role.USER, Role.ADMIN),
+  ReviewController.getAllMyReviews,
+);
+
+// ✅ Wildcard /:id routes LAST
+router.get("/:id", checkAuthOptional(), ReviewController.getSingleReview);
+
+// ... rest of your routes unchanged
 router.post(
   "/",
   checkAuth(Role.USER),
@@ -25,7 +41,7 @@ router.post(
 router.patch(
   "/:id",
   checkAuth(Role.USER),
-  validateRequest(ReviewValidation.updateReviewSchema), // Ensure you use the partial schema
+  validateRequest(ReviewValidation.updateReviewSchema),
   ReviewController.updateReview,
 );
 
@@ -34,32 +50,22 @@ router.post(
   checkAuth(Role.USER, Role.ADMIN),
   ReviewController.toggleLike,
 );
-
 router.post(
   "/:id/report",
   checkAuth(Role.USER, Role.ADMIN),
   validateRequest(ReviewValidation.reportReviewSchema),
   ReviewController.reportReview,
 );
-
 router.delete(
   "/:id",
   checkAuth(Role.USER, Role.ADMIN),
   ReviewController.deleteReview,
 );
-
-// Admin Moderation
 router.patch(
   "/:id/status",
   checkAuth(Role.ADMIN),
   validateRequest(ReviewValidation.changeStatusSchema),
   ReviewController.changeStatus,
-);
-
-router.get(
-  "/reports/queue",
-  checkAuth(Role.ADMIN),
-  ReviewController.getReports,
 );
 
 export const ReviewRoutes = router;

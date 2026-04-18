@@ -129,16 +129,23 @@ const getSingleMediaBySlug = async (slug: string) => {
   const result = await prisma.media.findUnique({
     where: { slug, isDeleted: false },
     include: {
+      // 🎯 THE FETCH: Get nested genre data through the join table
       genres: { include: { genre: true } },
       reviews: {
         where: { status: "APPROVED", isDeleted: false },
         include: { user: true },
-        take: 10, // Preview last 10 reviews
+        take: 10,
       },
     },
   });
 
   if (!result) throw new AppError(status.NOT_FOUND, "Media not found");
+
+  // 🎯 THE FIX: Flatten the manual join table structure
+  const flattenedMedia = {
+    ...result,
+    genres: result.genres.map((g: any) => g.genre), // Extracts { id, name } from the join object
+  };
 
   // Increment view count in background (non-blocking)
   prisma.media
@@ -148,7 +155,7 @@ const getSingleMediaBySlug = async (slug: string) => {
     })
     .catch((err) => console.error("Counter update failed", err));
 
-  return result;
+  return flattenedMedia;
 };
 
 const updateMediaInDB = async (id: string, payload: Partial<IMediaPayload>) => {

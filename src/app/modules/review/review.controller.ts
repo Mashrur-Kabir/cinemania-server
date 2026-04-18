@@ -46,14 +46,14 @@ const toggleLike = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllReviews = catchAsync(async (req: Request, res: Response) => {
+const getAllMyReviews = catchAsync(async (req: Request, res: Response) => {
   const filters = req.query as unknown as IReviewFilterOptions;
 
   // Use optional chaining in case guests (unauthenticated) can also view reviews
   const userRole = req.user?.role;
   const currentUserId = req.user?.id; // Assumes your auth middleware attaches 'id' to req.user
 
-  const result = await ReviewService.getAllReviewsFromDB(
+  const result = await ReviewService.getAllMyReviewsFromDB(
     filters,
     userRole,
     currentUserId,
@@ -64,6 +64,24 @@ const getAllReviews = catchAsync(async (req: Request, res: Response) => {
     success: true,
     message: "Reviews retrieved successfully!",
     meta: result.meta, // Contains pagination info from QueryBuilder
+    data: result.data,
+  });
+});
+
+const getApprovedReviews = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const filters = req.query as unknown as IReviewFilterOptions;
+
+  const result = await ReviewService.getApprovedReviewsFromDB(
+    userId as string,
+    filters,
+  );
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Public critiques fetched successfully",
+    meta: result.meta,
     data: result.data,
   });
 });
@@ -79,6 +97,23 @@ const getSingleReview = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
+const getAllApprovedPublicReviews = catchAsync(
+  async (req: Request, res: Response) => {
+    const filters = req.query as unknown as IReviewFilterOptions;
+
+    const result =
+      await ReviewService.getAllApprovedPublicReviewsFromDB(filters);
+
+    sendResponse(res, {
+      statusCode: status.OK,
+      success: true,
+      message: "Public approved reviews fetched successfully",
+      meta: result.meta,
+      data: result.data,
+    });
+  },
+);
 
 const changeStatus = catchAsync(async (req: Request, res: Response) => {
   const result = await ReviewService.updateReviewStatus(
@@ -139,7 +174,9 @@ export const ReviewController = {
   updateReview,
   toggleLike,
   changeStatus,
-  getAllReviews,
+  getAllMyReviews,
+  getApprovedReviews,
+  getAllApprovedPublicReviews,
   getSingleReview,
   reportReview,
   getReports,

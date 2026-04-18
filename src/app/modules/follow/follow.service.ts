@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../errors/AppError";
 import status from "http-status";
@@ -8,6 +9,12 @@ import {
 } from "../../../generated/prisma/enums";
 import { NotificationService } from "../notification/notification.service";
 import { AchievementService } from "../achievement/achievement.service";
+import { QueryBuilder } from "../../utils/QueryBuilder";
+import { Follow, Prisma } from "../../../generated/prisma/client";
+import {
+  followFilterableFields,
+  followSearchableFields,
+} from "./follow.constants";
 
 const toggleFollowInDB = async (followerId: string, followingId: string) => {
   if (followerId === followingId) {
@@ -87,30 +94,60 @@ const toggleFollowInDB = async (followerId: string, followingId: string) => {
   return result;
 };
 
-const getFollowersList = async (userId: string) => {
-  // Check if the user we are looking up actually exists
-  const userExists = await prisma.user.findUnique({ where: { id: userId } });
-  if (!userExists) throw new AppError(status.NOT_FOUND, "User not found");
-
-  return await prisma.follow.findMany({
-    where: { followingId: userId },
-    include: {
+const getFollowersList = async (
+  userId: string,
+  query: Record<string, any>, // 🎯 Changed unknown to any to satisfy IQueryParams
+) => {
+  const followerQuery = new QueryBuilder<
+    Follow,
+    Prisma.FollowWhereInput,
+    Prisma.FollowInclude
+  >(prisma.follow, query, {
+    // 🎯 THE FIX: Pass config here instead of in the methods
+    searchableFields: followSearchableFields,
+    filterableFields: followFilterableFields,
+  })
+    .search() // 🎯 No arguments here
+    .filter() // 🎯 No arguments here
+    .where({ followingId: userId })
+    .include({
       follower: {
         select: { id: true, name: true, image: true, role: true },
       },
-    },
-  });
+    })
+    .sort()
+    .paginate()
+    .fields();
+
+  return await followerQuery.execute();
 };
 
-const getFollowingList = async (userId: string) => {
-  return await prisma.follow.findMany({
-    where: { followerId: userId },
-    include: {
+const getFollowingList = async (
+  userId: string,
+  query: Record<string, any>, // 🎯 Changed unknown to any
+) => {
+  const followingQuery = new QueryBuilder<
+    Follow,
+    Prisma.FollowWhereInput,
+    Prisma.FollowInclude
+  >(prisma.follow, query, {
+    // 🎯 THE FIX: Pass config here
+    searchableFields: followSearchableFields,
+    filterableFields: followFilterableFields,
+  })
+    .search() // 🎯 No arguments here
+    .filter() // 🎯 No arguments here
+    .where({ followerId: userId })
+    .include({
       following: {
         select: { id: true, name: true, image: true, role: true },
       },
-    },
-  });
+    })
+    .sort()
+    .paginate()
+    .fields();
+
+  return await followingQuery.execute();
 };
 
 const checkFollowStatus = async (followerId: string, followingId: string) => {

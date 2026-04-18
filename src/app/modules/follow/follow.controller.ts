@@ -17,24 +17,36 @@ const toggleFollow = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getFollowers = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params as { userId: string };
-  const result = await FollowService.getFollowersList(userId);
+  const { userId } = req.params;
+  // 🎯 Pass req.query to the service
+  const result = await FollowService.getFollowersList(
+    userId as string,
+    req.query,
+  );
+
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
     message: "Followers retrieved",
-    data: result,
+    meta: result.meta, // 🎯 Now includes pagination info
+    data: result.data,
   });
 });
 
 const getFollowing = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params as { userId: string };
-  const result = await FollowService.getFollowingList(userId);
+  const { userId } = req.params;
+  // 🎯 Pass req.query to the service
+  const result = await FollowService.getFollowingList(
+    userId as string,
+    req.query,
+  );
+
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
     message: "Following list retrieved",
-    data: result,
+    meta: result.meta, // 🎯 Now includes pagination info
+    data: result.data,
   });
 });
 
