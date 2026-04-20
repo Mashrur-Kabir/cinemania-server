@@ -457,6 +457,33 @@ const deleteReviewFromDB = async (
   });
 };
 
+const getPendingReviewsFromDB = async (filters: IReviewFilterOptions) => {
+  const baseConditions: Prisma.ReviewWhereInput = {
+    status: ReviewStatus.PENDING,
+    isDeleted: false,
+  };
+
+  const reviewQuery = new QueryBuilder<
+    Review,
+    Prisma.ReviewWhereInput,
+    Prisma.ReviewInclude
+  >(prisma.review, filters, {
+    searchableFields: reviewSearchableFields,
+    filterableFields: reviewFilterableFields,
+  });
+
+  return await reviewQuery
+    .search()
+    .filter()
+    .where(baseConditions)
+    .dynamicInclude(reviewIncludeConfig, ["user", "media"]) // 🎯 Show who & what
+    .sort()
+    .paginate()
+    .execute();
+};
+
+// Add to ReviewService export
+
 export const ReviewService = {
   createReviewInDB,
   updateReviewInDB,
@@ -470,4 +497,5 @@ export const ReviewService = {
   reportReviewInDB,
   getReportedReviewsFromDB,
   deleteReviewFromDB,
+  getPendingReviewsFromDB,
 };

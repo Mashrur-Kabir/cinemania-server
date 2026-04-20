@@ -86,9 +86,21 @@ const getSubscriptionSummary = catchAsync(
   },
 );
 
+const getRevenueReport = catchAsync(async (req: Request, res: Response) => {
+  const result = await PaymentService.getRevenueReportFromDB();
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Revenue report generated",
+    data: result,
+  });
+});
+
 export const PaymentController = {
   handleStripeWebhookEvent,
   initiatePayment,
   getMyBillingHistory,
   getSubscriptionSummary,
+  getRevenueReport,
 };

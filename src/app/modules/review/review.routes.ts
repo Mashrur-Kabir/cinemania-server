@@ -15,6 +15,13 @@ router.get(
   ReviewController.getReports,
 );
 
+// Admin
+router.get(
+  "/admin/pending",
+  checkAuth(Role.ADMIN),
+  ReviewController.getPendingReviews,
+);
+
 router.get("/user/:userId", ReviewController.getApprovedReviews);
 
 // 🔥 PUBLIC FEED (homepage, discovery, etc.)
@@ -50,17 +57,20 @@ router.post(
   checkAuth(Role.USER, Role.ADMIN),
   ReviewController.toggleLike,
 );
+
 router.post(
   "/:id/report",
   checkAuth(Role.USER, Role.ADMIN),
   validateRequest(ReviewValidation.reportReviewSchema),
   ReviewController.reportReview,
 );
+
 router.delete(
   "/:id",
   checkAuth(Role.USER, Role.ADMIN),
   ReviewController.deleteReview,
 );
+
 router.patch(
   "/:id/status",
   checkAuth(Role.ADMIN),

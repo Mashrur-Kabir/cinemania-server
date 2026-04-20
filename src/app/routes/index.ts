@@ -13,11 +13,15 @@ import { PaymentRoutes } from "../modules/payment/payment.routes";
 import { DiscoveryRoutes } from "../modules/discovery/discovery.routes";
 import { ProfileRoutes } from "../modules/profile/profile.routes";
 import { AchievementRoutes } from "../modules/achievement/achievement.routes";
+import { UserRoutes } from "../modules/user/user.routes";
 
 const router = Router();
 
 //auth entry:
 router.use("/auth", AuthRoutes);
+
+//user
+router.use("/user", UserRoutes);
 
 //media
 router.use("/media", MediaRoutes);

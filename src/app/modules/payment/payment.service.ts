@@ -226,10 +226,47 @@ const syncExpiredSubscriptions = async () => {
   });
 };
 
+/**
+ * 📈 Revenue Matrix Aggregation (Admin Only)
+ * Calculates daily revenue for the last 30 days.
+ */
+const getRevenueReportFromDB = async () => {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  // 1. Fetch successful payments in the last 30 days
+  const payments = await prisma.payment.findMany({
+    where: {
+      status: PaymentStatus.PAID,
+      createdAt: { gte: thirtyDaysAgo },
+    },
+    select: {
+      amount: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  // 2. Aggregate data by date
+  const aggregation: Record<string, number> = {};
+
+  payments.forEach((p) => {
+    const date = p.createdAt.toISOString().split("T")[0]; // YYYY-MM-DD
+    aggregation[date] = (aggregation[date] || 0) + p.amount;
+  });
+
+  // 3. Format for Frontend Charts (e.g., Recharts/Tremor)
+  return Object.entries(aggregation).map(([date, amount]) => ({
+    date,
+    amount: parseFloat(amount.toFixed(2)),
+  }));
+};
+
 export const PaymentService = {
   createCheckoutSessionInDB,
   handleStripeWebhookService,
   getMyBillingHistoryFromDB,
   getSubscriptionSummaryFromDB,
   syncExpiredSubscriptions,
+  getRevenueReportFromDB,
 };

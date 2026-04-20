@@ -169,6 +169,19 @@ const deleteReview = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getPendingReviews = catchAsync(async (req: Request, res: Response) => {
+  const filters = req.query as unknown as IReviewFilterOptions;
+  const result = await ReviewService.getPendingReviewsFromDB(filters);
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Pending transmissions retrieved for moderation.",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
 export const ReviewController = {
   createReview,
   updateReview,
@@ -181,4 +194,5 @@ export const ReviewController = {
   reportReview,
   getReports,
   deleteReview,
+  getPendingReviews,
 };

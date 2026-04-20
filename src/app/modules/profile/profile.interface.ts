@@ -37,20 +37,29 @@ export interface IUserProfileStats {
   watchActivity: { month: string; count: number }[];
 }
 
-export interface IAdminDashboardStats {
+/**
+ * 🛰️ SYSTEM NEXUS OVERVIEW
+ * High-level platform metrics for the Admin Dashboard.
+ */
+export interface IAdminStats {
   platform: {
     totalUsers: number;
     totalPremiumUsers: number;
     totalMedia: number;
-    totalRevenue: number; // Sum of successful payments
+    totalRevenue: number;
   };
   engagement: {
     totalReviews: number;
-    pendingReviews: number;
+    pendingReviewsCount: number;
     activeSubscriptions: number;
   };
   topContent: {
     mostWatched: { title: string; views: number } | null;
     highestRated: { title: string; rating: number } | null;
   };
+  revenueData: {
+    date: string;
+    amount: number;
+  }[];
+  growthRate: number;
 }

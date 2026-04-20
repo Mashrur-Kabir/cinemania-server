@@ -14,7 +14,7 @@ router.get(
 
 // Restricted Admin dashboard
 router.get(
-  "/admin",
+  "/admin/stats",
   checkAuth(Role.ADMIN),
   ProfileController.getAdminDashboard,
 );

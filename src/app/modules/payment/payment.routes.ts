@@ -29,4 +29,11 @@ router.get(
   PaymentController.getSubscriptionSummary,
 );
 
+// 📈 Admin Financial Reports
+router.get(
+  "/admin/revenue-report",
+  checkAuth(Role.ADMIN),
+  PaymentController.getRevenueReport,
+);
+
 export const PaymentRoutes = router;

@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma";
 import { PaymentStatus, ReviewStatus } from "../../../generated/prisma/enums";
-import { IUserProfileStats, IAdminDashboardStats } from "./profile.interface";
+import { IUserProfileStats, IAdminStats } from "./profile.interface";
 
 // 🎯 Reusable Logic for any User ID
 const getUserStatsFromDB = async (
@@ -100,47 +100,75 @@ const getPersonalStatsFromDB = async (userId: string) => {
   return getUserStatsFromDB(userId);
 };
 
-const getAdminStatsFromDB = async (): Promise<IAdminDashboardStats> => {
-  const [users, media, revenue, subscriptions, reviews] = await Promise.all([
-    prisma.user.count(),
+const getAdminStatsFromDB = async (): Promise<IAdminStats> => {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const [
+    users,
+    premiumUsers,
+    media,
+    revenueAgg,
+    subscriptions,
+    reviews,
+    pendingReviews,
+    rawRevenueData,
+    topMedia,
+  ] = await Promise.all([
+    prisma.user.count({ where: { isDeleted: false } }),
+    prisma.subscription.count({ where: { type: "PREMIUM", isActive: true } }),
     prisma.media.count({ where: { isDeleted: false } }),
     prisma.payment.aggregate({
       _sum: { amount: true },
       where: { status: PaymentStatus.PAID },
     }),
     prisma.subscription.count({ where: { isActive: true } }),
-    prisma.review.aggregate({
-      _count: { _all: true },
-      where: { status: ReviewStatus.PENDING },
+    prisma.review.count(),
+    prisma.review.count({ where: { status: ReviewStatus.PENDING } }),
+    prisma.payment.findMany({
+      where: { status: PaymentStatus.PAID, createdAt: { gte: thirtyDaysAgo } },
+      select: { amount: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.media.findFirst({
+      where: { isDeleted: false },
+      orderBy: { watchCount: "desc" },
+      select: { title: true, watchCount: true },
     }),
   ]);
 
-  const topMedia = await prisma.media.findFirst({
-    where: { isDeleted: false },
-    orderBy: { watchCount: "desc" },
-    select: { title: true, watchCount: true },
+  // 📈 Process Time-Series Revenue Data
+  const revenueMap: Record<string, number> = {};
+  rawRevenueData.forEach((p) => {
+    const date = p.createdAt.toISOString().split("T")[0];
+    revenueMap[date] = (revenueMap[date] || 0) + p.amount;
   });
+
+  const revenueData = Object.entries(revenueMap).map(([date, amount]) => ({
+    date,
+    amount: parseFloat(amount.toFixed(2)),
+  }));
 
   return {
     platform: {
       totalUsers: users,
-      totalPremiumUsers: await prisma.subscription.count({
-        where: { type: "PREMIUM", isActive: true },
-      }),
+      totalPremiumUsers: premiumUsers,
       totalMedia: media,
-      totalRevenue: revenue._sum.amount || 0,
+      totalRevenue: parseFloat((revenueAgg._sum.amount || 0).toFixed(2)),
     },
     engagement: {
-      totalReviews: await prisma.review.count(),
-      pendingReviews: reviews._count._all,
+      totalReviews: reviews,
+      pendingReviewsCount: pendingReviews,
       activeSubscriptions: subscriptions,
     },
     topContent: {
       mostWatched: topMedia
         ? { title: topMedia.title, views: topMedia.watchCount }
         : null,
-      highestRated: null, // Similar query as mostWatched
+      highestRated: null, // Logic can follow mostWatched pattern
     },
+    revenueData,
+    growthRate: 12.5, // Placeholder for calculated growth logic
   };
 };
 
