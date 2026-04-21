@@ -48,9 +48,78 @@ const softDeleteUserFromDB = async (id: string) => {
   });
 };
 
+const getUserAnalyticsFromDB = async () => {
+  const [totalUsers, activeUsers, blockedUsers, adminUsers, standardUsers] =
+    await Promise.all([
+      prisma.user.count({ where: { isDeleted: false } }),
+      prisma.user.count({ where: { status: "ACTIVE", isDeleted: false } }),
+      prisma.user.count({ where: { status: "BLOCKED", isDeleted: false } }),
+      prisma.user.count({ where: { role: "ADMIN", isDeleted: false } }),
+      prisma.user.count({ where: { role: "USER", isDeleted: false } }),
+    ]);
+
+  // 📈 Calculate Registration Growth (Last 6 Months)
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  sixMonthsAgo.setDate(1); // Start of that month
+
+  const recentUsers = await prisma.user.findMany({
+    where: { createdAt: { gte: sixMonthsAgo }, isDeleted: false },
+    select: { createdAt: true },
+  });
+
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const growthMap: Record<string, number> = {};
+
+  // Initialize last 6 months with 0
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    growthMap[`${months[d.getMonth()]} ${d.getFullYear()}`] = 0;
+  }
+
+  // Populate data
+  recentUsers.forEach((u) => {
+    const key = `${months[u.createdAt.getMonth()]} ${u.createdAt.getFullYear()}`;
+    if (growthMap[key] !== undefined) growthMap[key]++;
+  });
+
+  const growthData = Object.entries(growthMap).map(([month, count]) => ({
+    month,
+    count,
+  }));
+
+  return {
+    overview: { totalUsers, activeUsers, blockedUsers, adminUsers },
+    statusDistribution: [
+      { name: "Active", value: activeUsers },
+      { name: "Blocked", value: blockedUsers },
+    ],
+    roleDistribution: [
+      { name: "Admin", value: adminUsers },
+      { name: "User", value: standardUsers },
+    ],
+    growthData,
+  };
+};
+
 export const UserService = {
   getAllUsersFromDB,
   updateUserRole,
   updateUserStatus,
   softDeleteUserFromDB,
+  getUserAnalyticsFromDB,
 };
