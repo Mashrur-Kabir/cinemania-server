@@ -3,13 +3,9 @@ import { ReviewStatus } from "../../../generated/prisma/enums";
 
 const createReviewSchema = z.object({
   body: z.object({
-    rating: z
-      .number()
-      .min(1)
-      .max(10)
-      .multipleOf(0.5, {
-        message: "Rating must be in increments of 0.5 (e.g., 4.5, 7.0)",
-      }),
+    rating: z.number().min(1).max(10).multipleOf(0.5, {
+      message: "Rating must be in increments of 0.5 (e.g., 4.5, 7.0)",
+    }),
     content: z.string().min(10, "Review must be at least 10 characters"),
     mediaId: z.uuid(),
     isSpoiler: z.boolean().optional(),
@@ -24,6 +20,7 @@ const updateReviewSchema = z.object({
 const changeStatusSchema = z.object({
   body: z.object({
     status: z.enum(ReviewStatus),
+    reason: z.string().max(500, "Reason too long").optional(), // 🎯 Added reason
   }),
 });
 

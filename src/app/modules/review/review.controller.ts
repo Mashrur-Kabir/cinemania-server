@@ -116,14 +116,18 @@ const getAllApprovedPublicReviews = catchAsync(
 );
 
 const changeStatus = catchAsync(async (req: Request, res: Response) => {
+  const { status: newStatus, reason } = req.body; // Extract reason
+
   const result = await ReviewService.updateReviewStatus(
     req.params.id as string,
-    req.body.status,
+    newStatus,
+    reason, // Pass reason to service
   );
+
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
-    message: `Review status updated to ${req.body.status}`,
+    message: `Review status updated to ${newStatus}`,
     data: result,
   });
 });
@@ -182,6 +186,35 @@ const getPendingReviews = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getArchivedReviews = catchAsync(async (req: Request, res: Response) => {
+  const filters = req.query as unknown as IReviewFilterOptions;
+  const result = await ReviewService.getMyArchivedReviewsFromDB(
+    req.user.id,
+    filters,
+  );
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Archived reviews retrieved successfully",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+const getAdminArchive = catchAsync(async (req: Request, res: Response) => {
+  const filters = req.query as unknown as IReviewFilterOptions;
+  const result = await ReviewService.getAdminArchivedReviewsFromDB(filters);
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Platform-wide archive retrieved successfully",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
 export const ReviewController = {
   createReview,
   updateReview,
@@ -195,4 +228,6 @@ export const ReviewController = {
   getReports,
   deleteReview,
   getPendingReviews,
+  getArchivedReviews,
+  getAdminArchive,
 };

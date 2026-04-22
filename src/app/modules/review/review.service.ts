@@ -82,19 +82,22 @@ const updateReviewInDB = async (
     throw new AppError(status.FORBIDDEN, "You can only edit your own reviews.");
 
   return await prisma.$transaction(async (tx) => {
-    // 🎯 FIX: Just update the payload. Do not touch the status field.
+    // 🚀 THE APPEAL LOGIC: If a user edits a REJECTED review, queue it for re-moderation
+    const newStatus =
+      review.status === ReviewStatus.REJECTED
+        ? ReviewStatus.PENDING
+        : review.status;
+
     const updatedReview = await tx.review.update({
       where: { id: reviewId },
       data: {
         ...payload,
+        status: newStatus,
+        rejectionReason:
+          newStatus === ReviewStatus.PENDING ? null : review.rejectionReason, // Clear reason on appeal
       },
     });
 
-    /**
-     * 📊 SYNC STATS:
-     * If the review is APPROVED and the rating was changed in the payload,
-     * we must re-calculate the movie's average rating.
-     */
     if (
       review.status === ReviewStatus.APPROVED &&
       payload.rating !== undefined
@@ -106,33 +109,46 @@ const updateReviewInDB = async (
   });
 };
 
+// 🎯 2. UPDATE: The Status & Notification Logic
 const updateReviewStatus = async (
   reviewId: string,
   newStatus: ReviewStatus,
+  reason?: string, // 🎯 Accept reason
 ) => {
   return await prisma.$transaction(async (tx) => {
-    // 1. Update status and fetch Media title to store in notification 'message'
     const review = await tx.review.update({
       where: { id: reviewId },
-      data: { status: newStatus },
+      data: {
+        status: newStatus,
+        rejectionReason: newStatus === ReviewStatus.REJECTED ? reason : null,
+      },
       include: { media: { select: { title: true } } },
     });
 
-    // 2. Sync Stats
     await syncMediaStats(review.mediaId, tx);
 
-    // 3. NOTIFICATION: To the author
     const type =
       newStatus === ReviewStatus.APPROVED
         ? NotificationType.REVIEW_APPROVED
         : NotificationType.REVIEW_REJECTED;
 
+    // 🎯 Dynamic Message and Link based on status
+    const message =
+      newStatus === ReviewStatus.APPROVED
+        ? review.media.title
+        : `${review.media.title} (Rejected: ${reason || "Violation of guidelines"})`;
+
+    const link =
+      newStatus === ReviewStatus.APPROVED
+        ? `/dashboard/my-reviews/${reviewId}`
+        : `/dashboard/my-reviews/archive/${reviewId}`;
+
     await NotificationService.createNotificationInDB(
       {
         userId: review.userId,
         type,
-        message: review.media.title, // We store the title so the formatter can use it
-        link: `/dashboard/my-reviews/${reviewId}`,
+        message,
+        link,
       },
       tx,
     );
@@ -482,7 +498,74 @@ const getPendingReviewsFromDB = async (filters: IReviewFilterOptions) => {
     .execute();
 };
 
-// Add to ReviewService export
+// 🎯 3. NEW: Fetch Archived Reviews
+const getMyArchivedReviewsFromDB = async (
+  userId: string,
+  filters: IReviewFilterOptions,
+) => {
+  const baseConditions: Prisma.ReviewWhereInput = {
+    userId,
+    status: ReviewStatus.REJECTED,
+    isDeleted: false,
+  };
+
+  const reviewQuery = new QueryBuilder<
+    Review,
+    Prisma.ReviewWhereInput,
+    Prisma.ReviewInclude
+  >(prisma.review, filters, {
+    searchableFields: reviewSearchableFields,
+    filterableFields: reviewFilterableFields,
+  });
+
+  return await reviewQuery
+    .search()
+    .filter()
+    .where(baseConditions)
+    .dynamicInclude(reviewIncludeConfig, ["media"])
+    .sort()
+    .paginate()
+    .execute();
+};
+
+// 🎯 4. NEW: 30-Day Cleanup (Call this in your cron jobs file)
+const cleanupArchivedReviews = async () => {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  return await prisma.review.deleteMany({
+    where: {
+      status: ReviewStatus.REJECTED,
+      updatedAt: { lt: thirtyDaysAgo },
+    },
+  });
+};
+
+// 🎯 NEW: Fetch ALL Archived Reviews for Admins
+const getAdminArchivedReviewsFromDB = async (filters: IReviewFilterOptions) => {
+  const baseConditions: Prisma.ReviewWhereInput = {
+    status: ReviewStatus.REJECTED,
+    isDeleted: false,
+  };
+
+  const reviewQuery = new QueryBuilder<
+    Review,
+    Prisma.ReviewWhereInput,
+    Prisma.ReviewInclude
+  >(prisma.review, filters, {
+    searchableFields: reviewSearchableFields,
+    filterableFields: reviewFilterableFields,
+  });
+
+  return await reviewQuery
+    .search()
+    .filter()
+    .where(baseConditions)
+    .dynamicInclude(reviewIncludeConfig, ["user", "media"]) // Admins need to see who wrote it
+    .sort()
+    .paginate()
+    .execute();
+};
 
 export const ReviewService = {
   createReviewInDB,
@@ -498,4 +581,7 @@ export const ReviewService = {
   getReportedReviewsFromDB,
   deleteReviewFromDB,
   getPendingReviewsFromDB,
+  getMyArchivedReviewsFromDB,
+  cleanupArchivedReviews,
+  getAdminArchivedReviewsFromDB,
 };

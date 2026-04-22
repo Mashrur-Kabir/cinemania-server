@@ -22,6 +22,18 @@ router.get(
   ReviewController.getPendingReviews,
 );
 
+router.get(
+  "/admin/archive",
+  checkAuth(Role.ADMIN),
+  ReviewController.getAdminArchive,
+);
+
+router.get(
+  "/archive/my-archive",
+  checkAuth(Role.USER),
+  ReviewController.getArchivedReviews,
+);
+
 router.get("/user/:userId", ReviewController.getApprovedReviews);
 
 // 🔥 PUBLIC FEED (homepage, discovery, etc.)
