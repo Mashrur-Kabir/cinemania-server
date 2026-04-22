@@ -19,6 +19,12 @@ router.get(
   ProfileController.getAdminDashboard,
 );
 
+router.get(
+  "/admin/me",
+  checkAuth(Role.ADMIN),
+  ProfileController.getAdminProfile,
+);
+
 // User profile (This must come last so it doesn't intercept "/me" or "/admin")
 router.get(
   "/:id",

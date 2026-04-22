@@ -37,8 +37,19 @@ const getAdminDashboard = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAdminProfile = catchAsync(async (req: Request, res: Response) => {
+  const result = await ProfileService.getAdminProfileFromDB(req.user.id);
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "System Administrator identity verified.",
+    data: result,
+  });
+});
+
 export const ProfileController = {
   getUserProfile,
   getMyStats,
   getAdminDashboard,
+  getAdminProfile,
 };

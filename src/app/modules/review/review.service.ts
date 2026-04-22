@@ -21,8 +21,11 @@ import { ActivityService } from "../activity/activity.service";
 import { NotificationService } from "../notification/notification.service";
 import { AchievementService } from "../achievement/achievement.service";
 
-const createReviewInDB = async (userId: string, payload: IReviewPayload) => {
-  // 1. Prevent multiple reviews for same media by same user
+const createReviewInDB = async (
+  userId: string,
+  role: string, // 🎯 Accept the role
+  payload: IReviewPayload,
+) => {
   const existingReview = await prisma.review.findFirst({
     where: { userId, mediaId: payload.mediaId, isDeleted: false },
   });
@@ -35,11 +38,18 @@ const createReviewInDB = async (userId: string, payload: IReviewPayload) => {
   }
 
   const review = await prisma.$transaction(async (tx) => {
+    // 🎯 THE FIX: Auto-Approve if Admin, otherwise let DB default to PENDING
+    const initialStatus =
+      role === Role.ADMIN ? ReviewStatus.APPROVED : ReviewStatus.PENDING;
+
     const createdReview = await tx.review.create({
-      data: { ...payload, userId },
+      data: {
+        ...payload,
+        userId,
+        status: initialStatus, // Inject status
+      },
     });
 
-    // We need the media title for the log
     const media = await tx.media.findUnique({ where: { id: payload.mediaId } });
 
     await ActivityService.createLogInDB(
@@ -47,18 +57,18 @@ const createReviewInDB = async (userId: string, payload: IReviewPayload) => {
       ActivityAction.REVIEW_CREATE,
       "Review",
       createdReview.id,
-      {
-        mediaTitle: media?.title,
-        rating: payload.rating,
-      },
+      { mediaTitle: media?.title, rating: payload.rating },
       tx,
     );
+
+    // 🎯 Only sync stats if it was auto-approved!
+    if (initialStatus === ReviewStatus.APPROVED) {
+      await syncMediaStats(payload.mediaId, tx);
+    }
 
     return createdReview;
   });
 
-  // --- Achievement Hook ---
-  // Trigger 'The Critic' check
   AchievementService.checkAndAwardBadges(userId, "REVIEWING").catch((err) =>
     console.error("Review Creation Badge Error:", err),
   );

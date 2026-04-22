@@ -7,11 +7,19 @@ import { IReviewFilterOptions } from "./review.interface";
 
 const createReview = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.id;
-  const result = await ReviewService.createReviewInDB(userId, req.body);
+  const role = req.user.role;
+
+  const result = await ReviewService.createReviewInDB(userId, role, req.body);
+  // Dynamic message based on role
+  const message =
+    role === "ADMIN"
+      ? "Official critique published instantly."
+      : "Review submitted! It will appear after moderation.";
+
   sendResponse(res, {
     statusCode: status.CREATED,
     success: true,
-    message: "Review submitted! It will appear after moderation.",
+    message,
     data: result,
   });
 });

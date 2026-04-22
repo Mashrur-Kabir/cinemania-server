@@ -1,6 +1,12 @@
 import { prisma } from "../../lib/prisma";
 import { PaymentStatus, ReviewStatus } from "../../../generated/prisma/enums";
-import { IUserProfileStats, IAdminStats } from "./profile.interface";
+import {
+  IUserProfileStats,
+  IAdminStats,
+  IAdminProfileStats,
+} from "./profile.interface";
+import { AppError } from "../../errors/AppError";
+import status from "http-status";
 
 // 🎯 Reusable Logic for any User ID
 const getUserStatsFromDB = async (
@@ -172,8 +178,53 @@ const getAdminStatsFromDB = async (): Promise<IAdminStats> => {
   };
 };
 
+// Add to src/app/modules/profile/profile.service.ts
+
+const getAdminProfileFromDB = async (
+  adminId: string,
+): Promise<IAdminProfileStats> => {
+  const admin = await prisma.user.findUnique({
+    where: { id: adminId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      role: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
+  if (!admin || admin.role !== "ADMIN") {
+    throw new AppError(status.FORBIDDEN, "Invalid clearance level.");
+  }
+
+  // Aggregate current operational queue
+  const [pendingReviews, activeUsers, reportedReviews] = await Promise.all([
+    prisma.review.count({ where: { status: ReviewStatus.PENDING } }),
+    prisma.user.count({ where: { status: "ACTIVE", isDeleted: false } }),
+    prisma.reviewReport.count(),
+  ]);
+
+  return {
+    user: admin,
+    systemAccess: {
+      clearanceLevel: "OMEGA-TIER", // Thematic flavor
+      grantedAt: admin.createdAt,
+      modulesActive: 5, // Media, Users, Genres, Reports, Overview
+    },
+    actionQueue: {
+      pendingModerations: pendingReviews,
+      activeUsers,
+      reportedReviews,
+    },
+  };
+};
+
 export const ProfileService = {
   getUserStatsFromDB,
   getPersonalStatsFromDB,
   getAdminStatsFromDB,
+  getAdminProfileFromDB,
 };

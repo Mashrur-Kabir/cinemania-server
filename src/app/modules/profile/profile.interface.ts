@@ -63,3 +63,25 @@ export interface IAdminStats {
   }[];
   growthRate: number;
 }
+
+export interface IAdminProfileStats {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+    role: Role;
+    status: UserStatus;
+    createdAt: Date;
+  };
+  systemAccess: {
+    clearanceLevel: string;
+    grantedAt: Date;
+    modulesActive: number;
+  };
+  actionQueue: {
+    pendingModerations: number;
+    activeUsers: number;
+    reportedReviews: number;
+  };
+}
