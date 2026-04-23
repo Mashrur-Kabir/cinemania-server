@@ -56,6 +56,8 @@ export const reviewIncludeConfig: Partial<
       },
       averageRating: true,
       posterUrl: true,
+      releaseYear: true,
+      platform: true,
     },
   },
   comments: {

@@ -92,19 +92,22 @@ const updateReviewInDB = async (
     throw new AppError(status.FORBIDDEN, "You can only edit your own reviews.");
 
   return await prisma.$transaction(async (tx) => {
-    // 🚀 THE APPEAL LOGIC: If a user edits a REJECTED review, queue it for re-moderation
-    const newStatus =
-      review.status === ReviewStatus.REJECTED
-        ? ReviewStatus.PENDING
-        : review.status;
+    // 🚀 THE APPEAL LOGIC: Check if it's an appeal
+    const isAppeal = review.status === ReviewStatus.REJECTED;
+    const newStatus = isAppeal ? ReviewStatus.PENDING : review.status;
 
     const updatedReview = await tx.review.update({
       where: { id: reviewId },
       data: {
         ...payload,
         status: newStatus,
-        rejectionReason:
-          newStatus === ReviewStatus.PENDING ? null : review.rejectionReason, // Clear reason on appeal
+        // 🎯 THE FIX: Do NOT clear the rejection reason here.
+        // Keep it attached so the Admin can read it in the Moderation Queue.
+        rejectionReason: review.rejectionReason,
+      },
+      include: {
+        user: { select: { name: true } },
+        media: { select: { title: true } },
       },
     });
 
@@ -113,6 +116,30 @@ const updateReviewInDB = async (
       payload.rating !== undefined
     ) {
       await syncMediaStats(review.mediaId, tx);
+    }
+
+    // 🎯 Send Notification to Admins if it was an appeal!
+    if (isAppeal) {
+      const admins = await tx.user.findMany({
+        where: { role: Role.ADMIN, isDeleted: false },
+        select: { id: true },
+      });
+
+      const notificationPromises = admins.map((admin) =>
+        NotificationService.createNotificationInDB(
+          {
+            userId: admin.id,
+            actorId: userId,
+            type: NotificationType.REPORT_ALERT,
+            message: `User ${updatedReview.user.name} appealed rejection for ${updatedReview.media.title}.`,
+            // 🎯 THE FIX: Append targetId to the query string
+            link: `/admin/dashboard/reports?tab=pending&targetId=${updatedReview.id}`,
+          },
+          tx,
+        ),
+      );
+
+      await Promise.all(notificationPromises);
     }
 
     return updatedReview;
@@ -321,7 +348,10 @@ const getApprovedReviewsFromDB = async (
 // Add this to your ReviewService
 const getSingleReviewFromDB = async (id: string) => {
   const result = await prisma.review.findUnique({
-    where: { id, isDeleted: false },
+    where: {
+      id,
+      isDeleted: false, // 🎯 Removed any status constraint so REJECTED can be fetched by ID
+    },
     include: {
       user: { select: { id: true, name: true, image: true, role: true } },
       media: true,
@@ -354,7 +384,6 @@ const getSingleReviewFromDB = async (id: string) => {
     }
   });
 
-  // Replace flat comments with the structured tree
   return { ...result, comments: commentTree };
 };
 
@@ -483,11 +512,17 @@ const deleteReviewFromDB = async (
   });
 };
 
-const getPendingReviewsFromDB = async (filters: IReviewFilterOptions) => {
+const getPendingReviewsFromDB = async (filters: any) => {
   const baseConditions: Prisma.ReviewWhereInput = {
     status: ReviewStatus.PENDING,
     isDeleted: false,
   };
+
+  // 🎯 THE FIX: Intercept targetId, apply exact match, and delete it so the QueryBuilder doesn't crash
+  if (filters.targetId) {
+    baseConditions.id = String(filters.targetId);
+    delete filters.targetId;
+  }
 
   const reviewQuery = new QueryBuilder<
     Review,
@@ -502,7 +537,7 @@ const getPendingReviewsFromDB = async (filters: IReviewFilterOptions) => {
     .search()
     .filter()
     .where(baseConditions)
-    .dynamicInclude(reviewIncludeConfig, ["user", "media"]) // 🎯 Show who & what
+    .dynamicInclude(reviewIncludeConfig, ["user", "media"])
     .sort()
     .paginate()
     .execute();

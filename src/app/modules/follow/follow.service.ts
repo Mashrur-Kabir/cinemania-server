@@ -94,22 +94,38 @@ const toggleFollowInDB = async (followerId: string, followingId: string) => {
   return result;
 };
 
-const getFollowersList = async (
-  userId: string,
-  query: Record<string, any>, // 🎯 Changed unknown to any to satisfy IQueryParams
-) => {
+const getFollowersList = async (userId: string, query: Record<string, any>) => {
+  // 🎯 1. Set up a strict AND array for Prisma
+  const conditions: Prisma.FollowWhereInput[] = [{ followingId: userId }];
+
+  // 🎯 2. Intercept the search term and build the nested relation query manually
+  if (query.searchTerm) {
+    conditions.push({
+      follower: {
+        is: {
+          // 'is' tells Prisma to look inside the joined User table
+          name: {
+            contains: query.searchTerm as string,
+            mode: "insensitive", // Case-insensitive search
+          },
+        },
+      },
+    });
+    // Delete it so the generic QueryBuilder doesn't try to use it and crash
+    delete query.searchTerm;
+  }
+
   const followerQuery = new QueryBuilder<
     Follow,
     Prisma.FollowWhereInput,
     Prisma.FollowInclude
   >(prisma.follow, query, {
-    // 🎯 THE FIX: Pass config here instead of in the methods
     searchableFields: followSearchableFields,
     filterableFields: followFilterableFields,
   })
-    .search() // 🎯 No arguments here
-    .filter() // 🎯 No arguments here
-    .where({ followingId: userId })
+    // 🚫 NOTICE: .search() is completely removed from here!
+    .filter()
+    .where({ AND: conditions }) // 🎯 Pass our custom conditions array
     .include({
       follower: {
         select: { id: true, name: true, image: true, role: true },
@@ -122,22 +138,37 @@ const getFollowersList = async (
   return await followerQuery.execute();
 };
 
-const getFollowingList = async (
-  userId: string,
-  query: Record<string, any>, // 🎯 Changed unknown to any
-) => {
+const getFollowingList = async (userId: string, query: Record<string, any>) => {
+  // 🎯 1. Set up a strict AND array for Prisma
+  const conditions: Prisma.FollowWhereInput[] = [{ followerId: userId }];
+
+  // 🎯 2. Intercept the search term and build the nested relation query manually
+  if (query.searchTerm) {
+    conditions.push({
+      following: {
+        is: {
+          // Look inside the joined User table
+          name: {
+            contains: query.searchTerm as string,
+            mode: "insensitive",
+          },
+        },
+      },
+    });
+    delete query.searchTerm;
+  }
+
   const followingQuery = new QueryBuilder<
     Follow,
     Prisma.FollowWhereInput,
     Prisma.FollowInclude
   >(prisma.follow, query, {
-    // 🎯 THE FIX: Pass config here
     searchableFields: followSearchableFields,
     filterableFields: followFilterableFields,
   })
-    .search() // 🎯 No arguments here
-    .filter() // 🎯 No arguments here
-    .where({ followerId: userId })
+    // 🚫 NOTICE: .search() is completely removed from here!
+    .filter()
+    .where({ AND: conditions }) // 🎯 Pass our custom conditions array
     .include({
       following: {
         select: { id: true, name: true, image: true, role: true },
