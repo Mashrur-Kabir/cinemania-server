@@ -2,6 +2,7 @@ import { envVars } from "../../config/env";
 import { Role, UserStatus } from "../../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
 import { auth } from "../lib/auth";
+import { logger } from "better-auth";
 
 export const seedAdmin = async () => {
   try {
@@ -13,11 +14,11 @@ export const seedAdmin = async () => {
     });
 
     if (existingAdmin) {
-      console.log("✅ Admin already exists. Skipping seed.");
+      logger.info("Admin already exists. Skipping seed.");
       return;
     }
 
-    console.log("🌱 Seeding admin...");
+    logger.info("🌱 Seeding admin...");
 
     // 🧑‍💻 Create admin using better-auth
     const admin = await auth.api.signUpEmail({
@@ -40,11 +41,9 @@ export const seedAdmin = async () => {
       },
     });
 
-    console.log("🔥 Admin created successfully:", {
-      email: envVars.ADMIN_EMAIL,
-    });
+    logger.success(`Admin created successfully: ${envVars.ADMIN_EMAIL}`);
   } catch (error) {
-    console.error("❌ Error seeding admin:", error);
+    logger.error("Error seeding admin", error);
 
     // 🧹 Cleanup if something fails
     await prisma.user.deleteMany({

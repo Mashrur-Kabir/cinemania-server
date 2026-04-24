@@ -11,6 +11,7 @@ import { planPrices } from "./payment.constants";
 import { Prisma } from "../../../generated/prisma/client";
 import { PaymentHelper } from "../../helpers/module.helpers/processPostPaymentTask";
 import { AchievementService } from "../achievement/achievement.service";
+import { logger } from "../../utils/logger";
 
 const createCheckoutSessionInDB = async (
   userId: string,
@@ -132,7 +133,7 @@ const handleStripeWebhookService = async (event: Stripe.Event) => {
 
       // --- Achievement Hook ---
       AchievementService.checkAndAwardBadges(userId, "LOYALTY").catch((err) =>
-        console.error("Loyalty Badge Error:", err),
+        logger.error("Loyalty Badge Error:", err),
       );
 
       // Background Tasks
@@ -140,7 +141,7 @@ const handleStripeWebhookService = async (event: Stripe.Event) => {
         result,
         subscriptionType as string,
       ).catch((err) =>
-        console.error("Post-payment background task failed:", err),
+        logger.error("Post-payment background task failed:", err),
       );
 
       break;
@@ -157,13 +158,13 @@ const handleStripeWebhookService = async (event: Stripe.Event) => {
           where: { userId, isActive: true },
           data: { isActive: false },
         });
-        console.log(`Access revoked for user ${userId} due to ${event.type}`);
+        logger.warn(`Access revoked for user ${userId} due to ${event.type}`);
       }
       break;
     }
 
     default:
-      console.log(`Unhandled event type: ${event.type}`);
+      logger.info(`Unhandled event type: ${event.type}`);
   }
 
   return { success: true };

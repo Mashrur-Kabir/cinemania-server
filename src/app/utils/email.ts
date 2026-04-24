@@ -4,6 +4,7 @@ import status from "http-status";
 import { AppError } from "../errors/AppError";
 import ejs from "ejs";
 import path from "path";
+import { logger } from "./logger";
 
 // Using TransportOptions with SMTP properties
 const transporter = nodemailer.createTransport({
@@ -58,10 +59,10 @@ export const sendEmail = async ({
       })),
     });
 
-    console.log(`Email sent to ${to}: ${info.messageId}`);
+    logger.success(`Email sent to ${to}: ${info.messageId}`);
     return info;
   } catch (error) {
-    console.error("Email send error:", error);
+    logger.error("Email send error", error);
     throw new AppError(
       status.INTERNAL_SERVER_ERROR,
       "Failed to send email notification. Please check your SMTP settings.",

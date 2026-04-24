@@ -1,5 +1,6 @@
 // ONE TIME SCRIPT
 
+import { logger } from "better-auth";
 import { prisma } from "../lib/prisma";
 
 async function main() {
@@ -115,7 +116,7 @@ async function main() {
     },
   ];
 
-  console.log("🎬 Seeding badges...");
+  logger.info("Seeding badges...");
 
   for (const b of badges) {
     await prisma.badge.upsert({
@@ -125,12 +126,12 @@ async function main() {
     });
   }
 
-  console.log("✅ Seed complete: 20 badges available.");
+  logger.success("Seed complete: 20 badges available.");
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    logger.error("Fatal error during badge seeding", e);
     process.exit(1);
   })
   .finally(async () => {

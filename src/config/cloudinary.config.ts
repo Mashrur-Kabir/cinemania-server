@@ -2,6 +2,7 @@ import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 import { envVars } from "./env";
 import { AppError } from "../app/errors/AppError";
 import status from "http-status";
+import { logger } from "../app/utils/logger";
 
 cloudinary.config({
   secure: true,
@@ -89,17 +90,17 @@ export const deleteFileFromCloudinary = async (url: string) => {
       });
 
       if (result.result === "not found") {
-        console.warn(
+        logger.warn(
           `File ${publicId} not found on Cloudinary with resource_type: ${resourceType}`,
         );
       } else {
-        console.log(
+        logger.info(
           `File ${publicId} (${resourceType}) deleted from Cloudinary`,
         );
       }
     }
   } catch (error) {
-    console.error("Error deleting file from Cloudinary:", error);
+    logger.error("Error deleting file from Cloudinary", error);
     throw new AppError(
       status.INTERNAL_SERVER_ERROR,
       "Failed to delete file from Cloudinary",

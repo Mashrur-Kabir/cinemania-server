@@ -34,9 +34,6 @@ export const checkAuthOptional = () => {
 
       req.user = decoded;
 
-      // 🕵️‍♂️ DEBUG: Uncomment this to verify user identity in your backend terminal
-      // console.log(`Authenticated: ${req.user.name} (${req.user.role})`);
-
       next();
     } catch (_error) {
       // Proceed as guest on invalid/expired token
