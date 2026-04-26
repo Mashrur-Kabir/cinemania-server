@@ -3,11 +3,11 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
 import { Role, UserStatus } from "../../generated/prisma/enums";
 import { envVars } from "../../config/env";
-import { bearer, emailOTP } from "better-auth/plugins";
+import { bearer, emailOTP, oAuthProxy } from "better-auth/plugins";
 import { sendEmail } from "../utils/email";
 
 export const auth = betterAuth({
-  baseURL: envVars.BETTER_AUTH_URL,
+  baseURL: envVars.FRONTEND_URL, //changed from: BETTER_AUTH_URL
   secret: envVars.BETTER_AUTH_SECRET,
 
   database: prismaAdapter(prisma, {
@@ -119,6 +119,7 @@ export const auth = betterAuth({
       expiresIn: 2 * 60, // 2 minutes
       otpLength: 6,
     }),
+    oAuthProxy(),
   ],
 
   // 🍪 Session config
