@@ -144,6 +144,25 @@ export const auth = betterAuth({
 
   // 🔒 Cookie security
   advanced: {
-    useSecureCookies: envVars.NODE_ENV === "production",
+    cookies: {
+      session_token: {
+        name: "session_token", // Force this exact name
+        attributes: {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+          partitioned: true,
+        },
+      },
+      state: {
+        name: "session_token", // Force this exact name
+        attributes: {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+          partitioned: true,
+        },
+      },
+    },
   },
 });

@@ -10,7 +10,7 @@ import {
   Role,
 } from "../../../generated/prisma/enums";
 import { QueryBuilder } from "../../utils/QueryBuilder";
-import { Prisma, Review } from "../../../generated/prisma/client";
+import { Prisma, Review, ReviewReport } from "../../../generated/prisma/client";
 import {
   reviewFilterableFields,
   reviewIncludeConfig,
@@ -451,20 +451,35 @@ const reportReviewInDB = async (
   });
 };
 
-const getReportedReviewsFromDB = async () => {
-  // This helps Admins see which reviews are getting flagged
-  return await prisma.reviewReport.findMany({
-    include: {
-      user: { select: { name: true, email: true } }, // Who reported it
-      review: {
-        include: {
-          user: { select: { name: true } }, // Who wrote the original review
-          media: { select: { title: true } }, // Which movie it's for
+const getReportedReviewsFromDB = async (filters: Record<string, any>) => {
+  const reportQuery = new QueryBuilder<
+    ReviewReport,
+    Prisma.ReviewReportWhereInput,
+    Prisma.ReviewReportInclude
+  >(prisma.reviewReport, filters, {
+    // Allows searching by reason, reporter name, or movie title!
+    searchableFields: ["reason", "user.name", "review.media.title"],
+    filterableFields: ["userId", "reviewId"],
+  });
+
+  return await reportQuery
+    .search()
+    .filter()
+    .dynamicInclude(
+      {
+        user: { select: { name: true, email: true } }, // Who reported it
+        review: {
+          include: {
+            user: { select: { name: true } }, // Who wrote the original review
+            media: { select: { title: true } }, // Which movie it's for
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      ["user", "review"],
+    )
+    .sort()
+    .paginate()
+    .execute();
 };
 
 const deleteReviewFromDB = async (

@@ -157,13 +157,15 @@ const reportReview = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getReports = catchAsync(async (req: Request, res: Response) => {
-  const result = await ReviewService.getReportedReviewsFromDB();
+  // 🎯 Pass req.query to the service
+  const result = await ReviewService.getReportedReviewsFromDB(req.query);
 
   sendResponse(res, {
     statusCode: status.OK,
     success: true,
     message: "Reports retrieved successfully",
-    data: result,
+    meta: result.meta, // 🎯 Attach the pagination metadata
+    data: result.data,
   });
 });
 

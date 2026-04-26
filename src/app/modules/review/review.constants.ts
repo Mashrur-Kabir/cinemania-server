@@ -6,7 +6,7 @@ import { Prisma } from "../../../generated/prisma/client";
  */
 export const reviewSearchableFields = [
   "content",
-  "tags",
+  //"tags",
   "user.name",
   "media.title",
 ];
