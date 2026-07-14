@@ -6,4 +6,5 @@ dist
 build
 /src/generated
 .vscode
+dump.sql
 .vercel

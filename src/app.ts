@@ -8,11 +8,15 @@ import { auth } from "./app/lib/auth";
 import path from "path";
 import { envVars } from "./config/env";
 import cors from "cors";
+import helmet from "helmet";
 import qs from "qs";
 import { PaymentController } from "./app/modules/payment/payment.controller";
 
 //express
 const app: Application = express();
+
+// required for express-rate-limit (and req.ip generally) to see real client IPs behind Vercel's proxy
+app.set("trust proxy", 1);
 
 //query parser
 app.set("query parser", (str: string) => qs.parse(str));
@@ -20,6 +24,13 @@ app.set("query parser", (str: string) => qs.parse(str));
 // Set EJS as the view engine
 app.set("view engine", "ejs");
 app.set("views", path.resolve(process.cwd(), `src/app/templates`));
+
+//security headers
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // disabled: this is a JSON API + EJS emails, not browser-rendered HTML; a default CSP here has no benefit and risk of breaking things
+  }),
+);
 
 //payment webhook event-handler
 app.post(

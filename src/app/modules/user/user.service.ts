@@ -4,6 +4,8 @@ import { prisma } from "../../lib/prisma";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { userFilterableFields, userSearchableFields } from "./user.constants";
 import { Role, UserStatus } from "./../../../generated/prisma/enums";
+import status from "http-status";
+import { AppError } from "../../errors/AppError";
 
 const getAllUsersFromDB = async (query: Record<string, any>) => {
   const userQuery = new QueryBuilder<
@@ -23,21 +25,57 @@ const getAllUsersFromDB = async (query: Record<string, any>) => {
   return await userQuery.execute();
 };
 
+const ensureNotLastAdmin = async (id: string) => {
+  const remainingAdmins = await prisma.user.count({
+    where: {
+      role: Role.ADMIN,
+      isDeleted: false,
+      status: UserStatus.ACTIVE,
+      id: { not: id },
+    },
+  });
+
+  if (remainingAdmins === 0) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "This is the last active admin account — the action was blocked to prevent locking everyone out of the admin dashboard.",
+    );
+  }
+};
+
 const updateUserRole = async (id: string, role: Role) => {
+  const target = await prisma.user.findUniqueOrThrow({ where: { id } });
+
+  if (target.role === Role.ADMIN && role !== Role.ADMIN) {
+    await ensureNotLastAdmin(id);
+  }
+
   return await prisma.user.update({
     where: { id },
     data: { role },
   });
 };
 
-const updateUserStatus = async (id: string, status: UserStatus) => {
+const updateUserStatus = async (id: string, newStatus: UserStatus) => {
+  const target = await prisma.user.findUniqueOrThrow({ where: { id } });
+
+  if (target.role === Role.ADMIN && newStatus !== UserStatus.ACTIVE) {
+    await ensureNotLastAdmin(id);
+  }
+
   return await prisma.user.update({
     where: { id },
-    data: { status },
+    data: { status: newStatus },
   });
 };
 
 const softDeleteUserFromDB = async (id: string) => {
+  const target = await prisma.user.findUniqueOrThrow({ where: { id } });
+
+  if (target.role === Role.ADMIN) {
+    await ensureNotLastAdmin(id);
+  }
+
   return await prisma.user.update({
     where: { id },
     data: {

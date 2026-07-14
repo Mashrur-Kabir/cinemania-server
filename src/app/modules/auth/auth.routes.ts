@@ -4,42 +4,49 @@ import { Role } from "../../../generated/prisma/enums";
 import checkAuth from "../../middlewares/authMiddleware";
 import validateRequest from "../../middlewares/validateRequest";
 import { AuthValidation } from "./auth.validation";
+import { authRateLimiter, otpRateLimiter } from "../../middlewares/rateLimiter";
 
 const router = Router();
 
 // --- Public Routes ---
 router.post(
   "/register",
+  authRateLimiter,
   validateRequest(AuthValidation.registerUserValidationSchema),
   AuthController.registerUser,
 );
 
 router.post(
   "/login",
+  authRateLimiter,
   validateRequest(AuthValidation.loginUserValidationSchema),
   AuthController.loginUser,
 );
 
 router.post(
   "/verify-email",
+  otpRateLimiter,
   validateRequest(AuthValidation.verifyEmailValidationSchema),
   AuthController.verifyEmail,
 );
 
 router.post(
   "/resend-otp",
+  otpRateLimiter,
   validateRequest(AuthValidation.resendOtpValidationSchema),
   AuthController.resendOTP,
 );
 
 router.post(
   "/forget-password",
+  authRateLimiter,
   validateRequest(AuthValidation.forgetPasswordValidationSchema),
   AuthController.forgetPassword,
 );
 
 router.post(
   "/reset-password",
+  authRateLimiter,
   validateRequest(AuthValidation.resetPasswordValidationSchema),
   AuthController.resetPassword,
 );

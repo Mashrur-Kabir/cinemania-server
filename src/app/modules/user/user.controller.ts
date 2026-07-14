@@ -3,6 +3,7 @@ import status from "http-status";
 import { catchAsync } from "../../shared/catchAsync";
 import sendResponse from "../../shared/sendResponse";
 import { UserService } from "./user.service";
+import { AppError } from "../../errors/AppError";
 
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.getAllUsersFromDB(req.query);
@@ -17,6 +18,14 @@ const getAllUsers = catchAsync(async (req: Request, res: Response) => {
 
 const changeRole = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
+
+  if (id === req.user.id) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "You cannot change your own role. Ask another admin to do this for you.",
+    );
+  }
+
   const result = await UserService.updateUserRole(id as string, req.body.role);
   sendResponse(res, {
     statusCode: status.OK,
@@ -28,6 +37,14 @@ const changeRole = catchAsync(async (req: Request, res: Response) => {
 
 const toggleStatus = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
+
+  if (id === req.user.id) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "You cannot change your own account status. Ask another admin to do this for you.",
+    );
+  }
+
   const result = await UserService.updateUserStatus(
     id as string,
     req.body.status,
@@ -42,6 +59,14 @@ const toggleStatus = catchAsync(async (req: Request, res: Response) => {
 
 const deleteUser = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
+
+  if (id === req.user.id) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "You cannot delete your own account from the admin panel.",
+    );
+  }
+
   await UserService.softDeleteUserFromDB(id as string);
   sendResponse(res, {
     statusCode: status.OK,
